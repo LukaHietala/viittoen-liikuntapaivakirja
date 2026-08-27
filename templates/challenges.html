@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Admin</title>
+	</head>
+	<body>
+		<div>
+			<h2>Luo uusi haaste</h2>
+			<form action="/api/challenges" method="POST">
+				<label for="name">Haasteen nimi:</label><br>
+				<input type="text" name="name"/><br>
+				<label for="points">Tavoite pisteet:</label><br>
+				<input type="text" name="points"/><br>
+				<label for="active">Aseta aktiiviseksi:</label><br>
+				<input type="checkbox" name="active"/><br>
+				<button type="submit">Lisää haaste</button>
+			</form>
+		</div>
+		<div>
+			<h2>Haasteet</h2>
+			<ul>
+				{{ range .Challenges }}
+				<li>
+					<strong>{{.Title}}</strong>
+					- Tavoite: {{.GoalPoints}} 
+					- Tila:
+					{{ if .IsActive }}
+					Aktiivinen
+					{{ else }}
+					Ei aktiivinen
+					{{ end }}
+				</li>
+				{{ end }}
+			</ul>
+		</div>
+	</body>
+</html>

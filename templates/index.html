@@ -1,1 +1,18 @@
-mirrsdfsdfsdfsdfi
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Etusivu</title>
+	</head>
+	<body>
+		<div>
+			<h2>Aktiivinen haaste</h2>
+			<p>Tavoite: {{ .Challenge.Title }} - {{ len .Challenge.Performances }}</p>
+		</div>
+		<div>
+			<h2>Lisää suoritus</h2>
+			<button>Lisää suoritus</button>
+		</div>
+	</body>
+</html>

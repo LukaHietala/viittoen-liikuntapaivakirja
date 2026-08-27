@@ -12,6 +12,8 @@ import (
 	"bytes"
 	"embed"
 	"strconv"
+	"slices"
+	
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -22,6 +24,14 @@ type Challenge struct {
 	Title string `json:"title"`
 	GoalPoints int `json:"goal_points"`
 	IsActive bool `json:"is_active"`
+	Performances []*Performance `json:"performances"`
+}
+
+func (c *Challenge) totalPoints() (points int) {
+	for _, p := range c.Performances {
+		points += p.Points
+	}
+	return
 }
 
 type User struct {
@@ -35,6 +45,7 @@ type User struct {
 
 type Performance struct {
 	ID int `json:"id"`
+	Points int `json:"points"`
 	ChallengeID int `json:"challenge_id"`
 }
 
@@ -52,6 +63,7 @@ var challenges = []*Challenge{
 //go:embed templates/*.html
 var templateFiles embed.FS
 
+////go:embe static
 //var staticFiles embed.FS
 
 type app struct {
@@ -99,6 +111,7 @@ func serve() http.Handler {
 		tmpl: tmpl,
 	}
 
+	r.Get("/", app.handleIndex)
 	r.Get("/admin", app.handleAdmin)
 
 	r.Route("/api", func(r chi.Router) {
@@ -121,6 +134,26 @@ func CreateChallenge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	challenges = append(challenges,	&Challenge{ID: 15, Title: name, GoalPoints: goal, IsActive: true})
+}
+
+func (app *app) handleIndex(w http.ResponseWriter, r *http.Request) {
+	var buf bytes.Buffer
+
+	activeIndex := slices.IndexFunc(challenges, func(c *Challenge) bool {
+		return c.IsActive
+	})
+	
+	err := app.tmpl.ExecuteTemplate(&buf, "index.html", map[string]any{
+		"Challenge": challenges[activeIndex],
+		"Points": challenges[activeIndex].totalPoints(),
+	})
+
+    if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+	}
+
+	buf.WriteTo(w)
 }
 
 func (app *app) handleAdmin(w http.ResponseWriter, r *http.Request) {

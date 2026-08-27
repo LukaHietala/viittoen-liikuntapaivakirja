@@ -20,6 +20,7 @@
 		</div>
 		<div>
 			<h2>Haasteet</h2>
+            {{ if .Challenges }}
 			<ul>
 				{{ range .Challenges }}
 				<li>
@@ -34,6 +35,9 @@
 				</li>
 				{{ end }}
 			</ul>
+            {{ else }}
+            <p>Ei haasteita</p>
+            {{ end }}
 		</div>
 	</body>
 </html>

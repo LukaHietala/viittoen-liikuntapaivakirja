@@ -23,7 +23,7 @@
 		</div>
 	</body>
 	<script>
-		document.addEventListener('alpine:init', () => {
+		document.addEventListener('alpine:init', async () => {
 			Alpine.store('state', {
 				challenge: {
 					title: "Ladataan...",
@@ -43,7 +43,7 @@
     				console.error(e.message);
                 }
 			}
-			getChallenge();
+			await getChallenge();
 
 			window.addPerformance = async (event) => {
 				const response = await fetch(`/api/performances`, {
@@ -52,9 +52,9 @@
 						points: 1,
 						user_id: 1,
 						challenge_id: Alpine.store('state').challenge.id
-					})
+					}) 
 				});
-				getChallenge();
+				await getChallenge();
 			}
 		});
 	</script>

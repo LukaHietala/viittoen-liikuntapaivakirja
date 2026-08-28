@@ -41,7 +41,7 @@
 		</div>
 	</body>
 	<script>
-		document.addEventListener('alpine:init', () => {
+		document.addEventListener('alpine:init', async () => {
 			Alpine.store('add', {
 				title: "",
 				points: 0,
@@ -63,7 +63,7 @@
     				console.error(e.message);
                 }
 			}
-			getChallenges();
+			await getChallenges();
 			
 			window.addChallenge = async (event) => {
 				const response = await fetch("/api/challenges", {
@@ -74,14 +74,14 @@
 						goal_points: parseInt(Alpine.store('add').points)
 					}),
 				});
-				getChallenges();
+				await getChallenges();
 			}
 
 			window.deleteChallenge = async (event, id) => {
 				const response = await fetch(`/api/challenges/${id}`, {
 					method: "DELETE"
 				});
-				getChallenges();
+				await getChallenges();
 			}
 		});
 	</script>

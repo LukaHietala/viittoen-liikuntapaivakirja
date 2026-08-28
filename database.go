@@ -3,29 +3,31 @@ package main
 import (
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/bcrypt"
+	"errors"
 )
 
 type Challenge struct {
-	ID         int `json:"id"`
-	Title      string `json:"title"`
-	GoalPoints int `json:"goal_points"`
-	IsActive   bool `json:"is_active"`
-	Pot int `json:"pot"`
+	ID           int            `json:"id"`
+	Title        string         `json:"title"`
+	GoalPoints   int            `json:"goal_points"`
+	IsActive     bool           `json:"is_active"`
+	Pot          int            `json:"pot"`
 	Performances []*Performance `json:"performances"`
 }
 
 type User struct {
-	ID           int `json:"id"`
-	Name         string `json:"name"`
-	PasswordHash string `json:"password_hash"`
-	IsAdmin      bool `json:"is_admin"`
+	ID           int            `json:"id"`
+	Name         string         `json:"name"`
+	PasswordHash string         `json:"password_hash"`
+	IsAdmin      bool           `json:"is_admin"`
 	Performances []*Performance `json:"performances"`
 }
 
 type Performance struct {
-	ID     int `json:"id"`
-	Points int `json:"points"`
-	UserID int `json:"user_id"`
+	ID          int `json:"id"`
+	Points      int `json:"points"`
+	UserID      int `json:"user_id"`
 	ChallengeID int `json:"challenge_id"`
 }
 
@@ -63,7 +65,7 @@ func connect() (*sql.DB, error) {
 			FOREIGN KEY(challenge_id) REFERENCES challenges(id)
 		);
 
-		INSERT INTO users VALUES(NULL, "Jaakko", "1234", TRUE);
+		INSERT INTO users VALUES(NULL, "Jaakko", "$2a$14$dhSvJi8wLpc0iAB5LW91Le4GKK/w9i7IKyZ6tgE7L8xnW4b2S2/lG", FALSE);
 		INSERT INTO challenges VALUES(NULL, "Syö paljon leipää", 3, TRUE);
 		INSERT INTO challenges VALUES(NULL, "Käy suihkussa", 1, FALSE);
 		INSERT INTO performances VALUES(NULL, 2, 1, 1);
@@ -97,7 +99,7 @@ func getAllChallenges() ([]*Challenge, error) {
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	
+
 	for _, c := range challenges {
 		rows, err = tx.Query(`
 			SELECT * FROM performances
@@ -108,7 +110,7 @@ func getAllChallenges() ([]*Challenge, error) {
 		defer rows.Close()
 
 		var pot int
-		
+
 		for rows.Next() {
 			p := new(Performance)
 			err = rows.Scan(&p.ID, &p.Points, &p.UserID, &p.ChallengeID)
@@ -171,7 +173,7 @@ func getAllUsers() ([]*User, error) {
 			}
 			u.Performances = append(u.Performances, p)
 		}
-		
+
 		if err = rows.Err(); err != nil {
 			return nil, err
 		}
@@ -202,7 +204,7 @@ func getActiveChallenge() (*Challenge, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	rows, err := tx.Query(`
 		SELECT * FROM performances
 		WHERE challenge_id = ?`, c.ID)
@@ -224,11 +226,11 @@ func getActiveChallenge() (*Challenge, error) {
 	}
 
 	c.Pot = pot
-	
+
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	
+
 	err = tx.Commit()
 	if err != nil {
 		return nil, err
@@ -258,4 +260,39 @@ func deleteChallenge(id int) error {
 	}
 
 	return nil
+}
+
+func getUser(id int) (*User, error) {
+	u := new(User)
+	err := db.QueryRow("SELECT * FROM users WHERE id = ?", id).Scan(&u.ID, &u.Name, &u.PasswordHash, &u.IsAdmin)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+// TODO: move to auth package
+func VerifyHash(password, hash string) bool {
+    err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+    return err == nil
+}
+
+func verifyUser(name, password string) (int, error) {
+	u := new(User)
+	row := db.QueryRow("SELECT * FROM users WHERE name = ?", name)
+	err := row.Scan(&u.ID, &u.Name, &u.PasswordHash, &u.IsAdmin)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if err == sql.ErrNoRows {
+		return 0,  errors.New("koira")
+	}
+
+	if VerifyHash(password, u.PasswordHash) {
+		return u.ID, nil
+	} else {
+		return 0, errors.New("koira2")
+	}
 }

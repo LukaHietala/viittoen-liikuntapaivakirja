@@ -9,12 +9,12 @@
 		<div>
 			<h2>Luo uusi haaste</h2>
 			<form action="/api/challenges" method="POST">
-				<label for="name">Haasteen nimi:</label><br>
-				<input type="text" name="name"/><br>
+				<label for="title">Haasteen nimi:</label><br>
+				<input type="text" name="title"/><br>
 				<label for="points">Tavoite pisteet:</label><br>
 				<input type="text" name="points"/><br>
 				<label for="active">Aseta aktiiviseksi:</label><br>
-				<input type="checkbox" name="active"/><br>
+				<input type="checkbox" name="active" value="moi"/><br>
 				<button type="submit">Lisää haaste</button>
 			</form>
 		</div>

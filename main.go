@@ -1,64 +1,24 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"database/sql"
+	"embed"
 	"errors"
+	_ "github.com/mattn/go-sqlite3"
+	"html/template"
 	"log"
 	"net/http"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
-	"html/template"
-	"bytes"
-	"embed"
-	"strconv"
-	"slices"
-	
+	"encoding/json"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
-
-type Challenge struct {
-	ID int `json:"id"`
-	Title string `json:"title"`
-	GoalPoints int `json:"goal_points"`
-	IsActive bool `json:"is_active"`
-	Performances []*Performance `json:"performances"`
-}
-
-func (c *Challenge) totalPoints() (points int) {
-	for _, p := range c.Performances {
-		points += p.Points
-	}
-	return
-}
-
-type User struct {
-	ID int `json:"id"`
-	Name string `json:"name"`
-	Points int `json:"points"`
-	PasswordHash string `json:"password_hash"`
-	IsAdmin bool `json:"is_admin"`
-	Performances []*Performance `json:"performances"`
-}
-
-type Performance struct {
-	ID int `json:"id"`
-	Points int `json:"points"`
-	ChallengeID int `json:"challenge_id"`
-}
-
-var users = []*User{
-	{ID: 1, Name: "Jaakko", Points: 12, PasswordHash: "1234", IsAdmin: true},
-	{ID: 2, Name: "Tero", Points: 10, PasswordHash: "1224", IsAdmin: true},
-	{ID: 3, Name: "Jorma", Points: 102, PasswordHash: "1334", IsAdmin: false},
-}
-
-var challenges = []*Challenge{
-	{ID: 1, Title: "Haaste 1", GoalPoints: 12, IsActive: true},
-	{ID: 2, Title: "Haaste 2", GoalPoints: 122, IsActive: false},
-}
 
 //go:embed templates/*.html
 var templateFiles embed.FS
@@ -66,15 +26,20 @@ var templateFiles embed.FS
 ////go:embe static
 //var staticFiles embed.FS
 
-type app struct {
-	tmpl *template.Template
-}
+var db *sql.DB
 
 func main() {
 	server := &http.Server{
 		Addr:    "0.0.0.0:3000",
 		Handler: serve(),
 	}
+
+	var err error
+	db, err = connect()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -116,6 +81,7 @@ func serve() http.Handler {
 
 	r.Route("/api", func(r chi.Router) {
 		r.Route("/challenges", func(r chi.Router) {
+			r.Get("/", GetChallenges)
 			r.Post("/", CreateChallenge)
 		})
 	})
@@ -123,32 +89,54 @@ func serve() http.Handler {
 	return r
 }
 
+
+func GetChallenges(w http.ResponseWriter, r *http.Request) {
+	challenges, err := getAllChallenges()
+	if err != nil {
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(challenges)
+}
+
 func CreateChallenge(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	name := r.Form.Get("name")
+	title := r.Form.Get("title")
+	active := r.Form.Get("active")
 	goal, err := strconv.Atoi(r.Form.Get("points"))
 
-	if name == "" || err != nil {
+	if title == "" || err != nil {
 		http.Error(w, http.StatusText(400), 400)
 		return
 	}
+	var isActive bool
+	if active == "" {
+		isActive = false
+	} else {
+		isActive = true
+	}
 
-	challenges = append(challenges,	&Challenge{ID: 15, Title: name, GoalPoints: goal, IsActive: true})
+	err = addChallenge(title, goal, isActive)
 }
 
 func (app *app) handleIndex(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
+	challenges, err := getAllChallenges()
+	if err != nil {
+		return
+	}
+	var pot int
+	pot, err = getChallengePot(challenges[0])
+	if err != nil {
+		return
+	}
 
-	activeIndex := slices.IndexFunc(challenges, func(c *Challenge) bool {
-		return c.IsActive
-	})
-	
-	err := app.tmpl.ExecuteTemplate(&buf, "index.html", map[string]any{
-		"Challenge": challenges[activeIndex],
-		"Points": challenges[activeIndex].totalPoints(),
+	err = app.tmpl.ExecuteTemplate(&buf, "index.html", map[string]any{
+		"Challenge": challenges[0],
+		"Points":    pot,
 	})
 
-    if err != nil {
+	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
 	}
@@ -158,12 +146,15 @@ func (app *app) handleIndex(w http.ResponseWriter, r *http.Request) {
 
 func (app *app) handleAdmin(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
+	challenges, err := getAllChallenges()
+	if err != nil {
+		return
+	}
 
-	err := app.tmpl.ExecuteTemplate(&buf, "challenges.html", map[string]any{
+	err = app.tmpl.ExecuteTemplate(&buf, "challenges.html", map[string]any{
 		"Challenges": challenges,
-		"Users": users,
 	})
-    if err != nil {
+	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
 	}

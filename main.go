@@ -1,30 +1,21 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
-	"embed"
 	"errors"
 	_ "github.com/mattn/go-sqlite3"
-	"html/template"
 	"log"
 	"net/http"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 	"encoding/json"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
-
-//go:embed templates/*.html
-var templateFiles embed.FS
-
-////go:embe static
-//var staticFiles embed.FS
 
 var db *sql.DB
 
@@ -67,32 +58,62 @@ func serve() http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	tmpl, err := template.New("base").ParseFS(templateFiles, "templates/*.html")
-	if err != nil {
-		log.Fatalf("Unable to parse templates: %v\n", err)
-	}
-
-	app := &app{
-		tmpl: tmpl,
-	}
-
-	r.Get("/", app.handleIndex)
-	r.Get("/admin", app.handleAdmin)
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "templates/index.html")		
+	})
+	r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "templates/challenges.html")		
+	})
 
 	r.Route("/api", func(r chi.Router) {
 		r.Route("/challenges", func(r chi.Router) {
+			r.Route("/active", func(r chi.Router) {
+				r.Get("/", GetActiveChallenge)
+			})
 			r.Get("/", GetChallenges)
 			r.Post("/", CreateChallenge)
+			r.Route("/{id}", func (r chi.Router) {
+				r.Delete("/{id}", DeleteChallenge)
+			})
+		})
+		r.Route("/performances", func(r chi.Router) {
+			r.Post("/", CreatePerformance)
+		})
+		r.Route("/users", func (r chi.Router)  {
+			r.Get("/", GetUsers)
 		})
 	})
 
 	return r
 }
 
+func GetUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := getAllUsers()
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}
+
+func GetActiveChallenge(w http.ResponseWriter, r *http.Request) {
+	c, err := getActiveChallenge()
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(c)
+}
 
 func GetChallenges(w http.ResponseWriter, r *http.Request) {
 	challenges, err := getAllChallenges()
 	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -100,64 +121,61 @@ func GetChallenges(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateChallenge(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	title := r.Form.Get("title")
-	active := r.Form.Get("active")
-	goal, err := strconv.Atoi(r.Form.Get("points"))
+	var req Challenge
 
-	if title == "" || err != nil {
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		log.Println(err)
 		http.Error(w, http.StatusText(400), 400)
 		return
 	}
-	var isActive bool
-	if active == "" {
-		isActive = false
-	} else {
-		isActive = true
-	}
+	defer r.Body.Close()
 
-	err = addChallenge(title, goal, isActive)
-}
-
-func (app *app) handleIndex(w http.ResponseWriter, r *http.Request) {
-	var buf bytes.Buffer
-	challenges, err := getAllChallenges()
-	if err != nil {
-		return
-	}
-	var pot int
-	pot, err = getChallengePot(challenges[0])
-	if err != nil {
+	if req.Title == "" {
+		http.Error(w, http.StatusText(400), 400)
 		return
 	}
 
-	err = app.tmpl.ExecuteTemplate(&buf, "index.html", map[string]any{
-		"Challenge": challenges[0],
-		"Points":    pot,
-	})
-
+	err = addChallenge(req.Title, req.GoalPoints, req.IsActive)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
-	}
-
-	buf.WriteTo(w)
-}
-
-func (app *app) handleAdmin(w http.ResponseWriter, r *http.Request) {
-	var buf bytes.Buffer
-	challenges, err := getAllChallenges()
-	if err != nil {
 		return
 	}
+}
 
-	err = app.tmpl.ExecuteTemplate(&buf, "challenges.html", map[string]any{
-		"Challenges": challenges,
-	})
+func DeleteChallenge(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
+		return
 	}
 
-	buf.WriteTo(w)
+	err = deleteChallenge(id)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+}
+
+func CreatePerformance(w http.ResponseWriter, r *http.Request) {
+	var req Performance
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(400), 400)
+		return
+	}
+	defer r.Body.Close()
+
+
+	err = addPerformance(req.Points, req.UserID, req.ChallengeID)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
 }

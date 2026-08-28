@@ -3,16 +3,59 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 		<title>Etusivu</title>
 	</head>
-	<body>
+	<body x-data="">
 		<div>
 			<h2>Aktiivinen haaste</h2>
-			<p>Tavoite: {{ .Challenge.Title }} - {{ .Points }}</p>
+			<p>Tavoite:
+				<span x-text="$store.state.challenge.title"></span>
+				-
+				<span x-text="$store.state.challenge.pot"></span>
+				/
+				<span x-text="$store.state.challenge.goal_points"></span>
+			</p>
 		</div>
 		<div>
 			<h2>Lisää suoritus</h2>
-			<button>Lisää suoritus</button>
+			<button x-on:click="addPerformance">Lisää suoritus</button>
 		</div>
 	</body>
+	<script>
+		document.addEventListener('alpine:init', () => {
+			Alpine.store('state', {
+				challenge: {
+					title: "Ladataan...",
+					points: "..."
+				}
+			});
+			async function getChallenge() { 
+				try {
+					const response = await fetch("/api/challenges/active");
+					if (!response.ok) {
+						throw new Error("Jotain meni pieleen: " + response.status);
+					}
+					Alpine.store('state', {
+						challenge: await response.json()
+					});
+				} catch (e) {
+    				console.error(e.message);
+                }
+			}
+			getChallenge();
+
+			window.addPerformance = async (event) => {
+				const response = await fetch(`/api/performances`, {
+					method: "POST",
+					body: JSON.stringify({
+						points: 1,
+						user_id: 1,
+						challenge_id: Alpine.store('state').challenge.id
+					})
+				});
+				getChallenge();
+			}
+		});
+	</script>
 </html>

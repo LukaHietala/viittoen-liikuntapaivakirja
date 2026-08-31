@@ -3,33 +3,50 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+		<script defer
+				src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js">
+		</script>
+		<style type="text/css" media="screen">
+			[x-cloak] { display: none !important; }		
+		</style>
 		<title>Etusivu</title>
 	</head>
 	<body x-data="">
-		<div>
-			<h2>Aktiivinen haaste</h2>
-			<p>Tavoite:
-				<span x-text="$store.state.challenge.title"></span>
-				-
-				<span x-text="$store.state.challenge.pot"></span>
-				/
-				<span x-text="$store.state.challenge.goal_points"></span>
-			</p>
-		</div>
-		<div>
-			<h2>Lisää suoritus</h2>
-			<button x-on:click="addPerformance">Lisää suoritus</button>
-		</div>
+		<template x-cloak x-if="$store.state.challenge != null">
+			<div>
+				<h2>Aktiivinen haaste</h2>
+				<p>Tavoite:
+					<span x-text="$store.state.challenge.title"></span>
+					-
+					<span x-text="$store.state.challenge.pot"></span>
+					/
+					<span x-text="$store.state.challenge.goal_points"></span>
+				</p>
+				<div x-show="$store.session.loggedIn">
+					<h2>Lisää suoritus</h2>
+					<button x-on:click="addPerformance">Lisää suoritus</button>
+				</div>
+			</div>
+		</template>
+		<template x-if="$store.state.challenge == null">
+			<div>
+				<h2>Ei ole aktiivista haastetta</h2>
+			</div>
+		</template>
 	</body>
 	<script>
 		document.addEventListener('alpine:init', async () => {
+			Alpine.store('session', {
+				loggedIn: false
+			});
+			
 			Alpine.store('state', {
 				challenge: {
 					title: "Ladataan...",
 					points: "..."
 				}
 			});
+			
 			async function getChallenge() { 
 				try {
 					const response = await fetch("/api/challenges/active");
@@ -50,12 +67,20 @@
 					method: "POST",
 					body: JSON.stringify({
 						points: 1,
-						user_id: 1,
 						challenge_id: Alpine.store('state').challenge.id
 					}) 
 				});
 				await getChallenge();
-			}
+			};
+
+			const loggedIn = async (event) => {
+				const res = await fetch("/api/session");
+				const json = await res.json();
+				Alpine.store('session', {
+					loggedIn: await json.ok
+				});
+			};
+			await loggedIn();
 		});
 	</script>
 </html>

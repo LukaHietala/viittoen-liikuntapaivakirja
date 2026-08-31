@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"net/http"
 	"net/url"
@@ -14,6 +13,8 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -74,9 +75,10 @@ func serve() http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
+	r.Use(jwtauth.Verifier(tokenAuth))
+
 	// Valid session required
 	r.Group(func(r chi.Router) {
-		r.Use(jwtauth.Verifier(tokenAuth))
 
 		r.Use(UnloggedInRedirector)
 
@@ -101,13 +103,11 @@ func serve() http.Handler {
 	})
 
 	r.Group(func(r chi.Router) {
-		r.Use(jwtauth.Verifier(tokenAuth))
-
 		r.Use(LoggedInRedirector)
 		r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, "templates/login.html")
 		})
-		
+
 		r.Post("/login", func(w http.ResponseWriter, r *http.Request) {
 			r.ParseForm()
 			name := r.PostForm.Get("name")
@@ -146,10 +146,9 @@ func serve() http.Handler {
 		})
 	})
 
-	r.Group(func (r chi.Router) {
-		r.Use(jwtauth.Verifier(tokenAuth))
+	r.Group(func(r chi.Router) {
 		r.Use(AdminOnly)
-		
+
 		r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, "templates/challenges.html")
 		})
@@ -158,7 +157,6 @@ func serve() http.Handler {
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "templates/index.html")
 	})
-	
 
 	r.Route("/api", func(r chi.Router) {
 		r.Route("/challenges", func(r chi.Router) {
@@ -167,6 +165,7 @@ func serve() http.Handler {
 			})
 			r.Get("/", GetChallenges)
 			r.Post("/", CreateChallenge)
+			r.Patch("/", UpdateChallenge)
 			r.Route("/{id}", func(r chi.Router) {
 				r.Delete("/{id}", DeleteChallenge)
 			})
@@ -176,6 +175,10 @@ func serve() http.Handler {
 		})
 		r.Route("/users", func(r chi.Router) {
 			r.Get("/", GetUsers)
+			r.Delete("/{id}", DeleteChallenge)
+		})
+		r.Route("/session", func(r chi.Router) {
+			r.Get("/", ValidSession)
 		})
 	})
 
@@ -196,10 +199,16 @@ func LoggedInRedirector(next http.Handler) http.Handler {
 
 func UnloggedInRedirector(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token, _, _ := jwtauth.FromContext(r.Context())
+		token, _, err := jwtauth.FromContext(r.Context())
 
-		if token == nil || jwt.Validate(token) != nil {
+		if token == nil || err != nil {
 			http.Redirect(w, r, "/login", 302)
+			return
+		}
+
+		if err := jwt.Validate(token); err != nil {
+			http.Redirect(w, r, "/login", 302)
+			return
 		}
 
 		next.ServeHTTP(w, r)
@@ -209,7 +218,7 @@ func UnloggedInRedirector(next http.Handler) http.Handler {
 func AdminOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, claims, _ := jwtauth.FromContext(r.Context())
-		
+
 		if token == nil || jwt.Validate(token) != nil {
 			http.Redirect(w, r, "/", 302)
 			return
@@ -237,8 +246,30 @@ func AdminOnly(next http.Handler) http.Handler {
 	})
 }
 
+func ValidSession(w http.ResponseWriter, r *http.Request) {
+	res := make(map[string]bool)
+	res["ok"] = true
+	token, claims, _ := jwtauth.FromContext(r.Context())
+	if token == nil || jwt.Validate(token) != nil {
+		res["ok"] = false
+	}
+
+	userIDFloat, ok := claims["user_id"].(float64)
+	if !ok {
+		res["ok"] = false
+
+	}
+	user, err := getUser(int(userIDFloat))
+	if err != nil || user == nil {
+		res["ok"] = false
+	}
+
+	// TODO: Maybe check if in db
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(res)
 
 
+}
 func GetUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := getAllUsers()
 	if err != nil {
@@ -248,6 +279,22 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
+}
+
+func DeleteUser(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+
+	err = deleteUser(id)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
 }
 
 func GetActiveChallenge(w http.ResponseWriter, r *http.Request) {
@@ -262,7 +309,8 @@ func GetActiveChallenge(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetChallenges(w http.ResponseWriter, r *http.Request) {
-	challenges, err := getAllChallenges()
+	ctx := r.Context()
+	challenges, err := getAllChallenges(ctx)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -283,12 +331,38 @@ func CreateChallenge(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
+	// TODO:
 	if req.Title == "" {
 		http.Error(w, http.StatusText(400), 400)
 		return
 	}
 
-	err = addChallenge(req.Title, req.GoalPoints, req.IsActive)
+	err = addChallenge(&req)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+}
+
+func UpdateChallenge(w http.ResponseWriter, r *http.Request) {
+	var req Challenge
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(400), 400)
+		return
+	}
+	defer r.Body.Close()
+
+	// TODO:
+	if req.Title == "" {
+		http.Error(w, http.StatusText(400), 400)
+		return
+	}
+
+	err = updateChallenge(&req)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -313,6 +387,7 @@ func DeleteChallenge(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreatePerformance(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	var req Performance
 
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -323,7 +398,7 @@ func CreatePerformance(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	err = addPerformance(req.Points, req.UserID, req.ChallengeID)
+	err = addPerformance(ctx, &req)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)

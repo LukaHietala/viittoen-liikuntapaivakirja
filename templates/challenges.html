@@ -1,21 +1,28 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<script
+			defer
+			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+			></script>
 		<title>Admin</title>
 	</head>
 	<body x-data="">
 		<div>
 			<h2>Luo uusi haaste</h2>
 			<fieldset>
-				<label for="title">Haasteen nimi:</label><br>
-				<input type="text" name="title" x-model="$store.add.title"/><br>
-				<label for="points">Tavoite pisteet:</label><br>
-				<input type="text" name="points" x-model="$store.add.points"/><br>
-				<label for="active">Aseta aktiiviseksi:</label><br>
-				<input type="checkbox" name="active" x-model="$store.add.active"/><br>
+				<label for="title">Haasteen nimi:</label><br />
+				<input type="text" name="title" x-model="$store.add.title" /><br />
+				<label for="points">Tavoite pisteet:</label><br />
+				<input type="text" name="points" x-model="$store.add.points" /><br />
+				<label for="active">Aseta aktiiviseksi:</label><br />
+				<input
+					type="checkbox"
+					name="active"
+					x-model="$store.add.active"
+					/><br />
 				<button type="submit" x-on:click="addChallenge">Lisää haaste</button>
 			</fieldset>
 		</div>
@@ -23,66 +30,96 @@
 			<h2>Haasteet</h2>
 			<ul x-show="$store.state.challenges.length > 0">
 				<template x-for="challenge in $store.state.challenges">
-				<li>
-					<strong x-text="challenge.title"></strong>
-					<span x-text="`- Tavoite: ${challenge.pot}`"></span>
-					/
-					<span x-text="challenge.goal_points"></span>
-					<span>- Tila: </span>
-					<span x-show="challenge.is_active">Aktiivinen</span>
-					<span x-show="!challenge.is_active">Ei aktiivinen</span>
-					<button x-on:click="deleteChallenge($event, challenge.id)">Poista</button>
-				</li>
+					<li>
+						<!-- NOT EDITING -->
+						<div x-show="$store.state.editing_id != challenge.id">
+							<strong x-text="challenge.title"></strong>
+							<span x-text="`- Tavoite: ${challenge.pot}`"></span>
+							/
+							<span x-text="challenge.goal_points"></span>
+							<span>- Tila: </span>
+							<span x-show="challenge.is_active">Aktiivinen</span>
+							<span x-show="!challenge.is_active">Ei aktiivinen</span>
+							<button x-on:click="$store.state.editing_id = challenge.id">
+								Muokkaa
+							</button>
+						</div>
+						<!-- EDITING -->
+						<div x-show="$store.state.editing_id == challenge.id">
+							<input type="text" x-model="challenge.title"/>
+							<span x-text="`- Tavoite: ${challenge.pot}`"></span>
+							/
+							<input type="number" x-model.number="challenge.goal_points"/>
+							<span>- Tila: </span>
+							<input x-model="challenge.is_active" type="checkbox"/>
+							<button x-on:click="$store.state.editing_id = null;
+												updateChallenge($event, challenge.id)">
+								Tallenna muokkaus
+							</button>
+							<button x-on:click="deleteChallenge($event, challenge.id)">
+								Poista
+							</button>
+						</div>
+					</li>
 				</template>
-			</ul>		
-            <p x-show="$store.state.challenges.length == 0">
-				Ei haasteita
-			</p>
+			</ul>
+			<p x-show="$store.state.challenges.length == 0">Ei haasteita</p>
 		</div>
 	</body>
 	<script>
-		document.addEventListener('alpine:init', async () => {
-			Alpine.store('add', {
+		document.addEventListener("alpine:init", async () => {
+			Alpine.store("add", {
 				title: "",
 				points: 0,
 				active: true,
 			});
-			Alpine.store('state', {
-				challenges: []
+			Alpine.store("state", {
+				challenges: [],
+				editing_id: null
 			});
-			async function getChallenges() { 
+			async function getChallenges() {
 				try {
 					const response = await fetch("/api/challenges");
 					if (!response.ok) {
 						throw new Error("Jotain meni pieleen: " + response.status);
 					}
-					Alpine.store('state', {
-						challenges: await response.json()
+					Alpine.store("state", {
+						challenges: await response.json(),
 					});
 				} catch (e) {
-    				console.error(e.message);
-                }
+					console.error(e.message);
+				}
 			}
 			await getChallenges();
-			
+
 			window.addChallenge = async (event) => {
 				const response = await fetch("/api/challenges", {
 					method: "POST",
 					body: JSON.stringify({
-						title: Alpine.store('add').title,
-						is_active:  Alpine.store('add').active,
-						goal_points: parseInt(Alpine.store('add').points)
+						title: Alpine.store("add").title,
+						is_active: Alpine.store("add").active,
+						goal_points: parseInt(Alpine.store("add").points),
 					}),
 				});
 				await getChallenges();
-			}
+			};
 
 			window.deleteChallenge = async (event, id) => {
 				const response = await fetch(`/api/challenges/${id}`, {
-					method: "DELETE"
+					method: "DELETE",
 				});
 				await getChallenges();
-			}
+			};
+
+			window.updateChallenge = async (event, id) => {
+				const challenge = Alpine.store('state').challenges.filter(
+					(challenge) => challenge.id == id)[0];
+				
+				const response = await fetch(`/api/challenges/`, {
+					method: "PATCH",
+					body: JSON.stringify(challenge),
+				});
+			};
 		});
 	</script>
 </html>

@@ -70,21 +70,21 @@
                 opacity: .8;
             }
 			
-            progress {
-                background: var(--primary);
-            color: var(--primary)
-            border-radius: 7px;
-            }
+            /* progress { */
+            /*     background: var(--bg); */
+			/* 	color: var(--primary); */
+			/* 	border-radius: 7px; */
+            /* } */
 
-            progress::-moz-progress-bar {
-            background: var(--primary);
-            border-radius: 7px;
-            }
+            /* progress::-moz-progress-bar { */
+			/* 	background: var(--bg); */
+			/* 	border-radius: 7px; */
+            /* } */
 		</style>
 	</head>
 	<body x-data="">
         <main>
-            <h2>Aktiiviset haastet</h2>
+            <h2>Aktiiviset haasteet</h2>
             <div x-show="$store.state.challenges.length > 0" class="list">
                 <template x-for="challenge in $store.state.challenges" class="list">
                     <div class="item">
@@ -94,7 +94,7 @@
                             /
                             <span x-text="challenge.goal_points"></span>
                             <progress x-bind:max="challenge.goal_points"
-                                      x-bind:value="challenge.pot">
+                                      x-bind:value="`${challenge.pot}`">
                                 Edistys mittari
                             </progress>
                         </div>

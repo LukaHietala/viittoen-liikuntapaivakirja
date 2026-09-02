@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/lestrrat-go/jwx/v3/jwt"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -14,17 +16,19 @@ type Challenge struct {
 	ID           int            `json:"id"`
 	Title        string         `json:"title"`
 	GoalPoints   int            `json:"goal_points"`
-	IsActive     bool           `json:"is_active"`
+	StartDate    string         `json:"start_date"`
+	EndDate      string         `json:"end_date"`
 	Pot          int            `json:"pot"`
 	Performances []*Performance `json:"performances"`
 }
 
 type User struct {
-	ID           int            `json:"id"`
-	Name         string         `json:"name"`
-	PasswordHash string         `json:"password_hash"`
-	IsAdmin      bool           `json:"is_admin"`
-	Performances []*Performance `json:"performances"`
+	ID            int            `json:"id"`
+	Name          string         `json:"name"`
+	PasswordHash  string         `json:"password_hash,omitempty"`
+	PasswordPlain string         `json:"password_plain,,omitempty"`
+	IsAdmin       bool           `json:"is_admin"`
+	Performances  []*Performance `json:"performances"`
 }
 
 type Performance struct {
@@ -57,7 +61,8 @@ func connect() (*sql.DB, error) {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			title TEXT NOT NULL,
 			goal_points INTEGER NOT NULL,
-			is_active BOOLEAN NOT NULL DEFAULT FALSE
+			start_date TEXT NOT NULL,
+			end_date TEXT NOT NULL
 		);
 
 		CREATE TABLE IF NOT EXISTS performances (
@@ -70,8 +75,8 @@ func connect() (*sql.DB, error) {
 		);
 
 		INSERT INTO users VALUES(NULL, "Jaakko", "$2a$14$dhSvJi8wLpc0iAB5LW91Le4GKK/w9i7IKyZ6tgE7L8xnW4b2S2/lG", TRUE);
-		INSERT INTO challenges VALUES(NULL, "Syö paljon leipää", 3, TRUE);
-		INSERT INTO challenges VALUES(NULL, "Käy suihkussa", 1, FALSE);
+		INSERT INTO challenges VALUES(NULL, "Syö paljon leipää", 3, "2026-09-01", "2026-09-10");
+		INSERT INTO challenges VALUES(NULL, "Käy suihkussa", 1, "2026-08-01", "2026-09-25");
 		INSERT INTO performances VALUES(NULL, 2, 1, 1);
 		INSERT INTO performances VALUES(NULL, 1, 1, 1);
 	`)
@@ -82,14 +87,22 @@ func connect() (*sql.DB, error) {
 	return db, nil
 }
 
+func TimeIsBetween(t, min, max time.Time) bool {
+	if min.After(max) {
+		min, max = max, min
+	}
+	return (t.Equal(min) || t.After(min)) && (t.Equal(max) || t.Before(max))
+}
+
+func IsValidDate(dateString string) bool {
+	if _, err := time.Parse(time.DateOnly, dateString); err != nil {
+		return false
+	}
+	return true
+}
+
 func getAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
-	var query string
-	if active {
-		query = "SELECT * FROM challenges WHERE is_active = 1"
-	} else {
-		query = "SELECT * FROM challenges"
-	} 
-	rows, err := db.QueryContext(ctx, query)
+	rows, err := db.QueryContext(ctx, "SELECT * FROM challenges")
 	if err != nil {
 		return nil, err
 	}
@@ -98,11 +111,31 @@ func getAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
 	challenges := make([]*Challenge, 0)
 	for rows.Next() {
 		c := new(Challenge)
-		err := rows.Scan(&c.ID, &c.Title, &c.GoalPoints, &c.IsActive)
+		err := rows.Scan(&c.ID, &c.Title, &c.GoalPoints, &c.StartDate, &c.EndDate)
 		if err != nil {
 			return nil, err
 		}
-		challenges = append(challenges, c)
+		if active {
+			var startDate, endDate time.Time
+			var err error
+			startDate, err = time.Parse(time.DateOnly, c.StartDate)
+			if err != nil {
+				fmt.Printf("unable to parse date")
+				continue
+			}
+			endDate, err = time.Parse(time.DateOnly, c.EndDate)
+			if err != nil {
+				fmt.Printf("unable to parse date")
+				continue
+			}
+			if TimeIsBetween(time.Now(), startDate, endDate) {
+				challenges = append(challenges, c)
+			} else {
+				continue
+			}
+		} else {
+			challenges = append(challenges, c)
+		}
 	}
 
 	if err = rows.Err(); err != nil {
@@ -208,9 +241,12 @@ func addPerformance(ctx context.Context, p *Performance) error {
 }
 
 func addChallenge(c *Challenge) error {
+	if !IsValidDate(c.StartDate) || !IsValidDate(c.EndDate) {
+		return fmt.Errorf("invalid dates")
+	}
 	_, err := db.Exec(`
-		INSERT INTO challenges(title, goal_points, is_active)
-		VALUES(?, ?, ?)`, c.Title, c.GoalPoints, c.IsActive)
+		INSERT INTO challenges(title, goal_points, start_date, end_date)
+		VALUES(?, ?, ?, ?)`, c.Title, c.GoalPoints, c.StartDate, c.EndDate)
 
 	if err != nil {
 		return err
@@ -232,10 +268,13 @@ func deleteChallenge(id int) error {
 }
 
 func updateChallenge(c *Challenge) error {
+	if !IsValidDate(c.StartDate) || !IsValidDate(c.EndDate) {
+		return fmt.Errorf("invalid dates")
+	}
 	_, err := db.Exec(`
 		UPDATE challenges
-		SET title = ?, is_active = ?, goal_points = ?
-		WHERE id = ?`, c.Title, c.IsActive, c.GoalPoints, c.ID)
+		SET title = ?, goal_points = ?, start_date = ?, end_date = ?
+		WHERE id = ?`, c.Title, c.GoalPoints, c.StartDate, c.EndDate, c.ID)
 
 	if err != nil {
 		return err
@@ -246,7 +285,7 @@ func updateChallenge(c *Challenge) error {
 
 func getUser(id int) (*User, error) {
 	u := new(User)
-	err := db.QueryRow("SELECT * FROM users WHERE id = ?", id).Scan(&u.ID, &u.Name, &u.PasswordHash, &u.IsAdmin)
+	err := db.QueryRow("SELECT * FROM users WHERE id = ? LIMIT 1", id).Scan(&u.ID, &u.Name, &u.PasswordHash, &u.IsAdmin)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("no user found based on id: %d", id)
@@ -256,8 +295,74 @@ func getUser(id int) (*User, error) {
 	return u, nil
 }
 
-func deleteUser(id int) error {
-	_, err := db.Exec(`
+func addUser(u *User) error {
+	hash, err := HashPassword(u.PasswordPlain)
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(`
+		INSERT INTO users(name, password_hash, is_admin)
+		VALUES(?, ?, ?)`, u.Name, hash, u.IsAdmin)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func updateUser(ctx context.Context, u *User) error {
+	token, claims, _ := jwtauth.FromContext(ctx)
+
+	if token == nil || jwt.Validate(token) != nil {
+		return fmt.Errorf("unable to validate user token")
+	}
+	userIDFloat, ok := claims["user_id"].(float64)
+	if !ok {
+		return fmt.Errorf("unable to convert user_id to float")
+	}
+	if u.ID == int(userIDFloat) && !u.IsAdmin {
+		return fmt.Errorf("can't remove own admin privileges")
+	}
+	
+	var err error
+	var hash string
+	if u.PasswordPlain != "" {
+		hash, err = HashPassword(u.PasswordPlain)
+		_, err = db.ExecContext(ctx, `
+		UPDATE users
+		SET name = ?, password_hash = ?, is_admin = ?
+		WHERE id = ?`, u.Name, hash, u.IsAdmin, u.ID)
+	} else {
+		_, err = db.ExecContext(ctx, `
+		UPDATE users
+		SET name = ?, is_admin = ?
+		WHERE id = ?`, u.Name, u.IsAdmin, u.ID)
+	}
+
+	// TODO: forgot pass
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func deleteUser(ctx context.Context, id int) error {
+	token, claims, _ := jwtauth.FromContext(ctx)
+
+	if token == nil || jwt.Validate(token) != nil {
+		return fmt.Errorf("unable to validate user token")
+	}
+	userIDFloat, ok := claims["user_id"].(float64)
+	if !ok {
+		return fmt.Errorf("unable to convert user_id to float")
+	}
+	if id == int(userIDFloat) {
+		return fmt.Errorf("can't remove self")
+	}
+
+	_, err := db.ExecContext(ctx, `
 		DELETE FROM users
 		WHERE id = ?`, id)
 
@@ -266,6 +371,63 @@ func deleteUser(id int) error {
 	}
 
 	return nil
+}
+
+func getSelf(ctx context.Context) (*User, error) {
+	token, claims, _ := jwtauth.FromContext(ctx)
+
+	if token == nil || jwt.Validate(token) != nil {
+		return nil, fmt.Errorf("unable to validate user token")
+	}
+	userIDFloat, ok := claims["user_id"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("unable to convert user_id to float")
+	}
+
+	u := new(User)
+	err := db.QueryRow("SELECT id, name, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.Name, &u.IsAdmin)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := db.Query(`
+		SELECT * FROM performances
+		WHERE user_id = ?`, u.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		p := new(Performance)
+		err = rows.Scan(&p.ID, &p.Points, &p.UserID, &p.ChallengeID)
+		if err != nil {
+			rows.Close()
+			return nil, err
+		}
+		u.Performances = append(u.Performances, p)
+	}
+
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+
+	rows.Close()
+
+	return u, nil
+}
+func getSession(id int) (*User, error) {
+	u := new(User)
+	err := db.QueryRow("SELECT id, name, is_admin FROM users WHERE id = ? LIMIT 1", id).Scan(&u.ID, &u.Name, &u.IsAdmin)
+	if err != nil {
+		return nil, err
+	}
+
+	return u, nil
+}
+
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes), err
 }
 
 // TODO: move to auth package

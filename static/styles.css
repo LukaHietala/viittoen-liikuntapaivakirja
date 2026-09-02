@@ -1,0 +1,97 @@
+:root {
+    --primary: #008391;
+    --bg: #fafafa;
+    --border: #e3e3e3;
+    --disabled: #c7d0d1;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    line-height: 1.5;
+    background-color: var(--bg);
+}
+
+main {
+    margin: 100px auto;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.item {
+    background-color: white;
+    padding: 15px;
+    border: 1px solid #e3e3e3;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    font-size: 1.1em;
+}
+
+.active {
+    border: 1px solid var(--primary);
+}
+
+.badge {
+    padding: 4px 6px;
+    margin-left: 8px;
+    font-size: 0.7em;
+    border: 1px solid var(--primary);
+    border-radius: 5px;
+}
+
+section {
+    background-color: white;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-size: 1.1em;
+}
+
+button {
+    border: none;
+    background-color: var(--primary);
+    padding: 10px 20px;
+    border-radius: 5px;
+    color: white;
+    cursor:pointer;
+    font-size: 0.9em;
+    height: min-content;
+}
+
+button:disabled {
+    background-color: var(--disabled);
+    cursor: not-allowed; 
+    opacity: 1 !important;
+}
+
+button:hover {
+    opacity: .8;
+}
+
+input {
+    padding: 4px 8px;
+    margin: 4px 0;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    outline: none;
+}
+
+input:focus {
+    border: 1px solid var(--primary);
+}

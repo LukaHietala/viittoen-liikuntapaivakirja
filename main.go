@@ -5,12 +5,15 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"path/filepath"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -76,6 +79,10 @@ func serve() http.Handler {
 	r.Use(middleware.Recoverer)
 
 	r.Use(jwtauth.Verifier(tokenAuth))
+
+	workDir, _ := os.Getwd()
+	filesDir := http.Dir(filepath.Join(workDir, "static"))
+	FileServer(r, "/static", filesDir)
 
 	// Valid session required
 	r.Group(func(r chi.Router) {
@@ -175,10 +182,15 @@ func serve() http.Handler {
 		})
 		r.Route("/users", func(r chi.Router) {
 			r.Get("/", GetUsers)
-			r.Delete("/{id}", DeleteChallenge)
+			r.Patch("/", UpdateUser)
+			r.Post("/", CreateUser)
+			r.Delete("/{id}", DeleteUser)
 		})
 		r.Route("/session", func(r chi.Router) {
 			r.Get("/", ValidSession)
+		})
+		r.Route("/self", func(r chi.Router) {
+			r.Get("/", GetSelf)
 		})
 	})
 
@@ -247,7 +259,7 @@ func AdminOnly(next http.Handler) http.Handler {
 }
 
 func ValidSession(w http.ResponseWriter, r *http.Request) {
-	res := make(map[string]bool)
+	res := make(map[string]any)
 	res["ok"] = true
 	res["admin"] = false
 	token, claims, _ := jwtauth.FromContext(r.Context())
@@ -260,13 +272,15 @@ func ValidSession(w http.ResponseWriter, r *http.Request) {
 		res["ok"] = false
 
 	}
-	user, err := getUser(int(userIDFloat))
+	user, err := getSession(int(userIDFloat))
 	if err != nil || user == nil {
 		res["ok"] = false
 	}
 
 	if user != nil {
 		res["admin"] = user.IsAdmin
+		res["name"] = user.Name
+		res["id"] = user.ID
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -284,15 +298,77 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
+func GetSelf(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, err := getSelf(ctx)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}
+
+func UpdateUser(w http.ResponseWriter, r *http.Request) {
+	var req User
+	ctx := r.Context()
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(400), 400)
+		return
+	}
+	defer r.Body.Close()
+
+	if req.Name == "" {
+		http.Error(w, http.StatusText(400), 400)
+		return
+	}
+
+	err = updateUser(ctx, &req)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+}
+
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	ctx := r.Context()
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
 		return
 	}
 
-	err = deleteUser(id)
+	err = deleteUser(ctx, id)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+}
+
+func CreateUser(w http.ResponseWriter, r *http.Request) {
+	var req User
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(400), 400)
+		return
+	}
+	defer r.Body.Close()
+
+	if req.Name == "" || req.PasswordPlain == "" {
+		http.Error(w, http.StatusText(400), 400)
+		return
+	}
+
+	err = addUser(&req)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -408,4 +484,23 @@ func CreatePerformance(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(500), 500)
 		return
 	}
+}
+
+func FileServer(r chi.Router, path string, root http.FileSystem) {
+	if strings.ContainsAny(path, "{}*") {
+		panic("FileServer does not permit any URL parameters.")
+	}
+
+	if path != "/" && path[len(path)-1] != '/' {
+		r.Get(path, http.RedirectHandler(path+"/", 301).ServeHTTP)
+		path += "/"
+	}
+	path += "*"
+
+	r.Get(path, func(w http.ResponseWriter, r *http.Request) {
+		rctx := chi.RouteContext(r.Context())
+		pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "/*")
+		fs := http.StripPrefix(pathPrefix, http.FileServer(root))
+		fs.ServeHTTP(w, r)
+	})
 }

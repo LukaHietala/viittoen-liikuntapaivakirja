@@ -7,32 +7,119 @@
 				src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js">
 		</script>
 		<style type="text/css" media="screen">
-			[x-cloak] { display: none !important; }		
+			[x-cloak] { display: none !important; }
+
+			:root {
+				--primary: #008391;
+				--bg: #fafafa;
+				--nimilogo: #00909d;
+				--tunnus: #006986;
+				--accent: #005b74;
+			}
+			
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+				font-family: Arial, sans-serif;
+                margin: 0;
+                line-height: 1.5;
+                background-color: var(--bg);
+            }
+
+            main {
+                margin: 100px auto;
+                max-width: 800px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .list {
+				display: flex;
+				flex-direction: column;
+				gap: 6px;
+			}
+
+			.item {
+				background-color: white;
+				padding: 10px;
+				border: 1px solid #e3e3e3;
+				border-radius: 5px;
+				text-align: center;
+				display: flex;
+				flex-direction: row;
+				justify-content: space-between;
+				align-content: center;
+				width: 100%;
+				font-size: 1.1em;
+			}
+
+            button {
+                border: none;
+                background-color: var(--primary);
+                padding: 10px 20px;
+                border-radius: 5px;
+                color: white;
+                cursor:pointer;
+                font-size: 0.9em;
+            }
+
+            button:hover {
+                opacity: .8;
+            }
+			
+            progress {
+                background: var(--primary);
+            color: var(--primary)
+            border-radius: 7px;
+            }
+
+            progress::-moz-progress-bar {
+            background: var(--primary);
+            border-radius: 7px;
+            }
 		</style>
-		<title>Etusivu</title>
 	</head>
 	<body x-data="">
-		<template x-cloak x-if="$store.state.challenge != null">
-			<div>
-				<h2>Aktiivinen haaste</h2>
-				<p>Tavoite:
-					<span x-text="$store.state.challenge.title"></span>
-					-
-					<span x-text="$store.state.challenge.pot"></span>
-					/
-					<span x-text="$store.state.challenge.goal_points"></span>
-				</p>
-				<div x-show="$store.session.loggedIn">
-					<h2>Lisää suoritus</h2>
-					<button x-on:click="addPerformance">Lisää suoritus</button>
-				</div>
-			</div>
-		</template>
-		<template x-if="$store.state.challenge == null">
-			<div>
-				<h2>Ei ole aktiivista haastetta</h2>
-			</div>
-		</template>
+        <main>
+            <h2>Aktiiviset haastet</h2>
+            <div x-show="$store.state.challenges.length > 0" class="list">
+                <template x-for="challenge in $store.state.challenges" class="list">
+                    <div class="item">
+                        <div style="align-content: center; margin-left: 10px;">
+                            <strong x-text="challenge.title"></strong>
+                            <span x-text="`- Tavoite: ${challenge.pot}`"></span>
+                            /
+                            <span x-text="challenge.goal_points"></span>
+                            <progress x-bind:max="challenge.goal_points"
+                                      x-bind:value="challenge.pot">
+                                Edistys mittari
+                            </progress>
+                        </div>
+                        <div x-show="$store.session.loggedIn" x-data="{ confirm: false }">
+                            <button x-show="!confirm" x-on:click="confirm = !confirm">Lisää suoritus</button>
+                            <button x-show="confirm" x-on:click="confirm =
+                                                                 false">
+                                Peruuta
+                            </button>
+                            <button x-show="confirm"
+                                    x-on:click="addPerformance($event,
+                                                challenge.id); confirm =
+                                                false">
+                                Vahvista
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <template x-if="$store.state.challenges.length == 0">
+                <div>
+                    <h2>Ei ole aktiivisia haasteita</h2>
+                </div>
+            </template>
+        </main>
 	</body>
 	<script>
 		document.addEventListener('alpine:init', async () => {
@@ -41,10 +128,7 @@
 			});
 			
 			Alpine.store('state', {
-				challenge: {
-					title: "Ladataan...",
-					points: "..."
-				}
+				challenges: []
 			});
 			
 			async function getChallenge() { 
@@ -53,34 +137,37 @@
 					if (!response.ok) {
 						throw new Error("Jotain meni pieleen: " + response.status);
 					}
-					Alpine.store('state', {
-						challenge: await response.json()
-					});
+					return await response.json()
 				} catch (e) {
     				console.error(e.message);
                 }
 			}
-			await getChallenge();
 
-			window.addPerformance = async (event) => {
+			Alpine.store('state', {
+				challenges: await getChallenge()
+			});
+
+			window.addPerformance = async (event, challenge_id) => {
 				const response = await fetch(`/api/performances`, {
 					method: "POST",
 					body: JSON.stringify({
 						points: 1,
-						challenge_id: Alpine.store('state').challenge.id
+						challenge_id: challenge_id
 					}) 
 				});
-				await getChallenge();
+				Alpine.store('state').challenges = await getChallenge();
 			};
 
 			const loggedIn = async (event) => {
 				const res = await fetch("/api/session");
 				const json = await res.json();
 				Alpine.store('session', {
-					loggedIn: await json.ok
+					loggedIn: await json.ok,
+					admin: await json.admin
 				});
 			};
 			await loggedIn();
+
 		});
 	</script>
 </html>

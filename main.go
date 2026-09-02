@@ -161,12 +161,12 @@ func serve() http.Handler {
 	r.Route("/api", func(r chi.Router) {
 		r.Route("/challenges", func(r chi.Router) {
 			r.Route("/active", func(r chi.Router) {
-				r.Get("/", GetActiveChallenge)
+				r.Get("/", GetActiveChallenges)
 			})
 			r.Get("/", GetChallenges)
 			r.Post("/", CreateChallenge)
 			r.Patch("/", UpdateChallenge)
-			r.Route("/{id}", func(r chi.Router) {
+			r.Route("/", func(r chi.Router) {
 				r.Delete("/{id}", DeleteChallenge)
 			})
 		})
@@ -249,6 +249,7 @@ func AdminOnly(next http.Handler) http.Handler {
 func ValidSession(w http.ResponseWriter, r *http.Request) {
 	res := make(map[string]bool)
 	res["ok"] = true
+	res["admin"] = false
 	token, claims, _ := jwtauth.FromContext(r.Context())
 	if token == nil || jwt.Validate(token) != nil {
 		res["ok"] = false
@@ -264,12 +265,14 @@ func ValidSession(w http.ResponseWriter, r *http.Request) {
 		res["ok"] = false
 	}
 
-	// TODO: Maybe check if in db
+	if user != nil {
+		res["admin"] = user.IsAdmin
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(res)
-
-
 }
+
 func GetUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := getAllUsers()
 	if err != nil {
@@ -297,20 +300,21 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetActiveChallenge(w http.ResponseWriter, r *http.Request) {
-	c, err := getActiveChallenge()
+func GetChallenges(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	challenges, err := getAllChallenges(ctx, false)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(c)
+	json.NewEncoder(w).Encode(challenges)
 }
 
-func GetChallenges(w http.ResponseWriter, r *http.Request) {
+func GetActiveChallenges(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	challenges, err := getAllChallenges(ctx)
+	challenges, err := getAllChallenges(ctx, true)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)

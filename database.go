@@ -35,10 +35,11 @@ type Performance struct {
 }
 
 func connect() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", ":memory:?_journal_mode=WAL")
 	if err != nil {
 		return nil, err
 	}
+	db.SetMaxOpenConns(1)
 	err = db.Ping()
 	if err != nil {
 		return nil, err
@@ -81,9 +82,14 @@ func connect() (*sql.DB, error) {
 	return db, nil
 }
 
-func getAllChallenges(ctx context.Context) ([]*Challenge, error) {
-	tx, _ := db.BeginTx(ctx, nil)
-	rows, err := tx.QueryContext(ctx, `SELECT * FROM challenges`)
+func getAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
+	var query string
+	if active {
+		query = "SELECT * FROM challenges WHERE is_active = 1"
+	} else {
+		query = "SELECT * FROM challenges"
+	} 
+	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -94,9 +100,6 @@ func getAllChallenges(ctx context.Context) ([]*Challenge, error) {
 		c := new(Challenge)
 		err := rows.Scan(&c.ID, &c.Title, &c.GoalPoints, &c.IsActive)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, fmt.Errorf("no challenges")
-			}
 			return nil, err
 		}
 		challenges = append(challenges, c)
@@ -107,45 +110,39 @@ func getAllChallenges(ctx context.Context) ([]*Challenge, error) {
 	}
 
 	for _, c := range challenges {
-		rows, err = tx.QueryContext(ctx, `
+		pRows, err := db.QueryContext(ctx, `
 			SELECT * FROM performances
 			WHERE challenge_id = ?`, c.ID)
 		if err != nil {
 			return nil, err
 		}
-		defer rows.Close()
 
 		var pot int
 
-		for rows.Next() {
+		for pRows.Next() {
 			p := new(Performance)
-			err = rows.Scan(&p.ID, &p.Points, &p.UserID, &p.ChallengeID)
-			pot += p.Points
+			err = pRows.Scan(&p.ID, &p.Points, &p.UserID, &p.ChallengeID)
 			if err != nil {
-				if err == sql.ErrNoRows {
-					return nil, nil
-				}
+				pRows.Close()
 				return nil, err
 			}
+			pot += p.Points
 			c.Performances = append(c.Performances, p)
 		}
 
-		c.Pot = pot
-
-		if err != nil {
+		if err := pRows.Err(); err != nil {
+			pRows.Close()
 			return nil, err
 		}
-	}
-	err = tx.Commit()
-	if err != nil {
-		return nil, err
+
+		pRows.Close()
+		c.Pot = pot
 	}
 	return challenges, nil
 }
 
 func getAllUsers() ([]*User, error) {
-	tx, _ := db.Begin()
-	rows, err := tx.Query(`SELECT * FROM users`)
+	rows, err := db.Query(`SELECT * FROM users`)
 	if err != nil {
 		return nil, err
 	}
@@ -166,30 +163,29 @@ func getAllUsers() ([]*User, error) {
 	}
 
 	for _, u := range users {
-		rows, err = tx.Query(`
+		uRows, err := db.Query(`
 			SELECT * FROM performances
 			WHERE user_id = ?`, u.ID)
 		if err != nil {
 			return nil, err
 		}
-		defer rows.Close()
 
-		for rows.Next() {
+		for uRows.Next() {
 			p := new(Performance)
-			err = rows.Scan(&p.ID, &p.Points, &p.UserID, &p.ChallengeID)
+			err = uRows.Scan(&p.ID, &p.Points, &p.UserID, &p.ChallengeID)
 			if err != nil {
+				uRows.Close()
 				return nil, err
 			}
 			u.Performances = append(u.Performances, p)
 		}
 
-		if err = rows.Err(); err != nil {
+		if err = uRows.Err(); err != nil {
+			uRows.Close()
 			return nil, err
 		}
-	}
-	err = tx.Commit()
-	if err != nil {
-		return nil, err
+
+		uRows.Close()
 	}
 
 	return users, nil
@@ -209,60 +205,6 @@ func addPerformance(ctx context.Context, p *Performance) error {
 	}
 
 	return nil
-}
-
-func getActiveChallenge() (*Challenge, error) {
-	c := new(Challenge)
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	err = tx.QueryRow(`SELECT * FROM challenges WHERE is_active = 1`).Scan(&c.ID, &c.Title, &c.GoalPoints, &c.IsActive)
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = nil
-	rows, err := tx.Query(`
-		SELECT * FROM performances
-		WHERE challenge_id = ?`, c.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	var pot int
-
-	for rows.Next() {
-		p := new(Performance)
-		err = rows.Scan(&p.ID, &p.Points, &p.UserID, &p.ChallengeID)
-		pot += p.Points
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil
-			}
-			return nil, err
-		}
-		c.Performances = append(c.Performances, p)
-	}
-
-	c.Pot = pot
-
-	if err = rows.Err(); err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-	err = tx.Commit()
-	if err != nil {
-		return nil, err
-	}
-
-	return c, nil
 }
 
 func addChallenge(c *Challenge) error {

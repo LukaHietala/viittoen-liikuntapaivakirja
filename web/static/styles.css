@@ -20,7 +20,8 @@ body {
 
 main {
     margin: 100px auto;
-    max-width: 800px;
+    max-width: 850px;
+	padding: 0 25px;	
     display: flex;
     flex-direction: column;
     gap: 6px;

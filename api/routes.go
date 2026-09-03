@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -35,8 +34,7 @@ func Serve(contentFS fs.FS) http.Handler {
 		r.Use(UnloggedInRedirector)
 
 		r.Get("/profile", func(w http.ResponseWriter, r *http.Request) {
-			_, claims, _ := jwtauth.FromContext(r.Context())
-			fmt.Fprintf(w, "Hei siellä %v", claims["user_id"])
+			http.ServeFileFS(w, r, templateFS, "profile.html")
 		})
 
 		r.Get("/logout", func(w http.ResponseWriter, r *http.Request) {
@@ -120,9 +118,8 @@ func Serve(contentFS fs.FS) http.Handler {
 			r.Get("/", GetChallenges)
 			r.Post("/", CreateChallenge)
 			r.Patch("/", UpdateChallenge)
-			r.Route("/", func(r chi.Router) {
-				r.Delete("/{id}", DeleteChallenge)
-			})
+			r.Get("/{id}", GetChallenge)	
+			r.Delete("/{id}", DeleteChallenge)
 		})
 		r.Route("/performances", func(r chi.Router) {
 			r.Post("/", CreatePerformance)
@@ -258,6 +255,24 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func GetChallenge(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+	challenge, err := db.GetChallenge(ctx, id)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(challenge)
+}
+
 func CreateUser(w http.ResponseWriter, r *http.Request) {
 	var req db.User
 
@@ -391,5 +406,3 @@ func CreatePerformance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-
-

@@ -8,6 +8,15 @@ import (
 	"github.com/go-chi/jwtauth/v5"
 )
 
+func GetChallenge(ctx context.Context, id int) (*Challenge, error) {
+	c := new(Challenge)
+	err := DB.QueryRowContext(ctx, "SELECT * FROM challenges WHERE id = ? LIMIT 1", id).Scan(&c.ID, &c.Title, &c.GoalPoints, &c.StartDate, &c.EndDate)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
 func GetAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
 	rows, err := DB.QueryContext(ctx, "SELECT * FROM challenges")
 	if err != nil {

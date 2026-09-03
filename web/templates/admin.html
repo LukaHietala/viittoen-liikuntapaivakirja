@@ -57,8 +57,7 @@
 										   Date.parse($store.add.challenge.start_date)
 										   > Date.parse($store.add.challenge.end_date)"
 								x-on:click="addChallenge($event);
-											adding = false"
-								>
+											adding = false">
 								Lisää haaste
 							</button>
 							<button
@@ -80,7 +79,9 @@
 			</div>
 			<div x-show="$store.state.challenges.length > 0" class="list">
 				<template x-for="challenge in $store.state.challenges">
-					<div>
+					<div
+						x-data="{ showPerformances : false }"
+                        >
 						<!-- NOT EDITING -->
 						<div
 							x-show="$store.state.editing_id !=
@@ -89,7 +90,6 @@
 									challenge.end_date)
 									? 'item active' :
 									'item'"
-							x-data="{ showPerformances : false }"
 							>
 							<div style="align-content: center">
 								<strong x-text="challenge.title"></strong>
@@ -119,47 +119,58 @@
 								<button x-on:click="showPerformances = !showPerformances">
 									Suoritukset
 								</button>
-								<button x-on:click="$store.state.editing_id = challenge.id" class="secondary-btn icon-btn">
+								<button x-on:click="$store.state.editing_id =
+													challenge.id;
+													showPerformances = false"
+										class="secondary-btn icon-btn">
                                     <img src="/static/pen.svg" alt="Muokkaa" />
 								</button>
 							</div>
-							<!-- PERFORMANCES -->
-							<template x-if="showPerformances">
-								<div
-									x-data="{
-											map:
-											challenge.performances.reduce(
-											((map, x) => (map.get(x.user_id)) ? (
-											map.get(x.user_id).push(x), map ) :
-											(map.set(x.user_id, [x]), map))
-											,new Map())
-											}">
-									<br>
-									<template x-for="value in map">
-										<!-- alpine boilerplate -->
-										<div x-data="{
-													 name:
-													 $store.state.users.filter((u)=>u.id==value[0])[0].name
-													 }">
-											<strong x-text="`Käyttäjä ${name}`">
-											</strong>
-											<ul>
-												<template x-for="performance in value[1]">
-													<li>
-														<span x-text="`Lisätty:
-																	  ${performance.created_at}`">
-														</span>
-														<span x-text="`Pisteitä:
-																	  ${performance.points}`">
-														</span>
-													</li>
-												</template>
-											</ul>
-										</div>
-									</template>
-								</div>
-							</template>
 						</div>
+                        <!-- PERFORMANCES -->
+                        <template x-if="showPerformances">
+                            <section
+                                style="margin-top: 6px;"
+                                x-data="{
+										map: challenge.performances ?
+										challenge.performances.reduce(
+										((map, x) => (map.get(x.user_id)) ? (
+										map.get(x.user_id).push(x), map ) :
+										(map.set(x.user_id, [x]), map))
+										,new Map())
+										: new Map()
+										}">
+                                <template x-for="value in map">
+                                    <!-- alpine boilerplate -->
+                                    <div x-data="{
+												 name:
+												 $store.state.users.filter((u)=>u.id==value[0])[0].name
+												 }">
+                                        <div style="padding: 15px; border-bottom: 1px solid var(--border)">
+                                            <strong x-text="`${name}`"></strong>
+                                        </div>
+                                        <div>
+                                            <template x-for="performance in value[1]">
+                                                <div style="padding: 10px 15px; border-bottom: 1px solid var(--border);">
+                                                    <span x-text="`${performance.created_at}`">
+                                                    </span>
+                                                    <span x-text="`Pisteitä:
+																  ${performance.points}`">
+                                                    </span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div style="padding: 10px 15px;"x-show="challenge.performances == null ||
+                                                  challenge.performances.length ==
+                                                  0">
+                                    <span>
+                                        Ei suorituksia
+                                    </span>
+                                </div>
+                            </section>
+                        </template>
 						<!-- EDITING -->
 						<section x-show="$store.state.editing_id == challenge.id">
 							<div style="padding: 15px">
@@ -203,16 +214,20 @@
 					<div x-show="adding">
 						<div style="padding: 15px">
 							<label for="name">Käyttäjän nimi:</label><br />
-							<input type="text" name="name" x-model="$store.add.title" />
-							<br />
+							<input type="text" name="name"
+								   x-model="$store.add.user.name" />
+							<br/>
+							<label for="password">Salasana:</label><br />
+							<input type="text" name="password"
+								   x-model="$store.add.user.password" />
 						</div>
 						<div style="padding: 15px; border-top: 1px solid var(--border)">
 							<button
 								type="submit"
-								:disabled="true"
-								x-on:click="addChallenge($event);
-											adding = false"
-								>
+								:disabled="$store.add.user.name.length == 0 ||
+										   $store.add.user.password.length == 0"
+								x-on:click="addUser($event);
+											adding = false">
 								Lisää käyttäjä
 							</button>
 							<button
@@ -264,16 +279,15 @@
 							<div style="padding: 15px; border-top: 1px solid var(--border)">
 								<button
 									x-on:click="$store.state.editing_user_id = null;
-												updateUser($event, user.id)"
-									>
+												updateUser($event, user.id)">
 									Tallenna muokkaus
 								</button>
 								<button
 									x-on:click="deleteUser($event,
 												user.id)"
 									:disabled="$store.session.id == user.id"
-									:title="($store.session.id == user.id) ? 'Et voi poistaa itseäsi' : ''"
-									>
+									:title="($store.session.id == user.id) ?
+											'Et voi poistaa itseäsi' : ''">
 									Poista
 								</button>
 							</div>
@@ -292,6 +306,10 @@
 					start_date: null,
 					end_date: null,
 				},
+				user: {
+					name: "",
+					password: createRandomPassword(5)
+				}
 			});
 			Alpine.store("state", {
 				challenges: [],
@@ -305,10 +323,12 @@
 				id: 0,
 			});
 
-			window.suomiDate = (date) =>
-			date.split("-").reduce((s, t) => (t = `${t}.${s}`));
-			window.isActive = (start, end) =>
-			Date.now() > Date.parse(start) && Date.now() < Date.parse(end);
+			window.suomiDate = (date) => (
+				date.split("-").reduce((s, t) => (t = `${t}.${s}`))
+			);
+			window.isActive = (start, end) => (
+				Date.now() > Date.parse(start) && Date.now() < Date.parse(end)
+			);
 
 			async function getChallenges() {
 				try {
@@ -349,11 +369,14 @@
 						points: 0,
 						start_date: null,
 						end_date: null,
-					},
+					},	
+					user: {
+						name: "",
+						password: createRandomPassword(5)
+					}
 				});
 			};
 			window.addChallenge = async (event) => {
-				event.preventDefault();
 				const response = await fetch("/api/challenges", {
 					method: "POST",
 					body: JSON.stringify({
@@ -365,6 +388,17 @@
 				});
 				clearAdd();
 				Alpine.store("state").challenges = await getChallenges();
+			};
+			window.addUser = async (event) => {
+				const response = await fetch("/api/users", {
+					method: "POST",
+					body: JSON.stringify({
+						name: Alpine.store("add").user.name,
+						password_plain: Alpine.store("add").user.password,
+					}),
+				});
+				clearAdd();
+				Alpine.store("state").users = await getUsers();
 			};
 			// Challenges
 			window.deleteChallenge = async (event, id) => {
@@ -398,6 +432,13 @@
 					body: JSON.stringify(user),
 				});
 			};
+
+			function createRandomPassword(length) {
+                const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+				return [...Array(length).keys()].map(()=>
+					chars.charAt(Math.floor(Math.random() * chars.length))).join("");
+            }
+
 			// Session
 			const loggedIn = async (event) => {
 				const res = await fetch("/api/session");

@@ -174,7 +174,7 @@ func GetSelf(ctx context.Context) (*User, error) {
 
 	for rows.Next() {
 		p := new(Performance)
-		err = rows.Scan(&p.ID, &p.Points, &p.UserID, &p.ChallengeID)
+		err = rows.Scan(&p.ID, &p.Points, &p.UserID, &p.ChallengeID, &p.CreatedAt)
 		if err != nil {
 			rows.Close()
 			return nil, err

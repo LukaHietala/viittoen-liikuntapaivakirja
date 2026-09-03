@@ -3,6 +3,8 @@
     --bg: #fafafa;
     --border: #e3e3e3;
     --disabled: #c7d0d1;
+    --border-dark: #bababa;
+    --border-darker: #ababab;
 }
 
 * {
@@ -81,6 +83,21 @@ button:disabled {
 
 button:hover {
     opacity: .8;
+}
+
+.secondary-btn {
+    background-color: white;
+    border: 1px solid var(--border-dark);
+    color: black;
+}
+
+.secondary-btn:hover {
+    background-color: #f5f5f5;
+    border: 1px solid var(--border-darker);
+}
+
+.icon-btn {
+    padding: 7px 12px;
 }
 
 input {

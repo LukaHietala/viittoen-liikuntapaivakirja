@@ -1,4 +1,4 @@
-module viittoen-liikuntapaivakirja
+module github.com/LukaHietala/viittoen-liikuntapaivakirja
 
 go 1.26.5
 

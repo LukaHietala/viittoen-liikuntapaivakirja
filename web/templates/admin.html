@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<script
+			defer
+			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+			></script>
+		<link rel="stylesheet" href="static/styles.css" />
+		<title>Admin</title>
+	</head>
+	<body x-data="">
+		<main>
+			<div>
+				<h2>Haasteet</h2>
+				<section x-data="{ adding: false }">
+					<div x-show="adding">
+						<div style="padding: 15px">
+							<label for="title">Haasteen nimi:</label><br />
+							<input
+								type="text"
+								name="title"
+								x-model="$store.add.challenge.title"
+								/><br />
+							<label for="points">Tavoite pisteet:</label><br />
+							<input
+								type="number"
+								name="points"
+								x-model.number="$store.add.challenge.points"
+								/><br />
+							<label for="start_date">Aloitus</label><br />
+							<input
+								type="date"
+								name="start_date"
+								value=""
+								x-model="$store.add.challenge.start_date"
+								/><br />
+							<label for="end_date">Lopetus</label><br />
+							<input
+								type="date"
+								name="end_date"
+								value=""
+								x-model="$store.add.challenge.end_date"
+								/>
+						</div>
+						<div style="padding: 15px; border-top: 1px solid var(--border)">
+							<button
+								type="submit"
+								:disabled="$store.add.challenge.title.length == 0 ||
+										   parseInt($store.add.challenge.points) ==
+										   NaN ||
+										   $store.add.challenge.points == null ||
+										   $store.add.challenge.points.length == 0 ||
+										   $store.add.challenge.start_date == null ||
+										   $store.add.challenge.end_date == null ||
+										   Date.parse($store.add.challenge.start_date)
+										   > Date.parse($store.add.challenge.end_date)"
+								x-on:click="addChallenge($event);
+											adding = false"
+								>
+								Lisää haaste
+							</button>
+							<button
+								type="submit"
+                                class="secondary-btn"
+								x-on:click="adding = false;
+											clearAdd($event);"
+								>
+								Peruuta
+							</button>
+						</div>
+					</div>
+					<div style="padding: 15px" x-show="!adding">
+						<button type="submit" x-on:click="adding = true">
+							Lisää haaste
+						</button>
+					</div>
+				</section>
+			</div>
+			<div x-show="$store.state.challenges.length > 0" class="list">
+				<template x-for="challenge in $store.state.challenges">
+					<div>
+						<!-- NOT EDITING -->
+						<div
+							x-show="$store.state.editing_id !=
+									challenge.id"
+							:class="isActive(challenge.start_date,
+									challenge.end_date)
+									? 'item active' :
+									'item'"
+							x-data="{ showPerformances : false }"
+							>
+							<div style="align-content: center">
+								<strong x-text="challenge.title"></strong>
+								<span x-text="`- Tavoite: ${challenge.pot}`"></span>
+								/
+								<span x-text="challenge.goal_points"></span>
+								-
+								<strong>Tila: </strong>
+								<span
+									x-show="isActive(challenge.start_date,
+											challenge.end_date)">
+									Aktiivinen
+								</span>
+								<span
+									x-show="!isActive(challenge.start_date,
+											challenge.end_date)">
+									Ei aktiivinen
+								</span>
+								<br />
+								<strong>Ajanjakso: </strong>
+								<span
+									x-text="` ${suomiDate(challenge.start_date)}
+											- ${suomiDate(challenge.end_date)}`">
+								</span>
+							</div>
+                            <div style="display: inline-flex; gap: 6px;">
+								<button x-on:click="showPerformances = !showPerformances">
+									Suoritukset
+								</button>
+								<button x-on:click="$store.state.editing_id = challenge.id" class="secondary-btn icon-btn">
+                                    <img src="/static/pen.svg" alt="Muokkaa" />
+								</button>
+							</div>
+							<!-- PERFORMANCES -->
+							<template x-if="showPerformances">
+								<div
+									x-data="{
+											map:
+											challenge.performances.reduce(
+											((map, x) => (map.get(x.user_id)) ? (
+											map.get(x.user_id).push(x), map ) :
+											(map.set(x.user_id, [x]), map))
+											,new Map())
+											}">
+									<br>
+									<template x-for="value in map">
+										<!-- alpine boilerplate -->
+										<div x-data="{
+													 name:
+													 $store.state.users.filter((u)=>u.id==value[0])[0].name
+													 }">
+											<strong x-text="`Käyttäjä ${name}`">
+											</strong>
+											<ul>
+												<template x-for="performance in value[1]">
+													<li>
+														<span x-text="`Lisätty:
+																	  ${performance.created_at}`">
+														</span>
+														<span x-text="`Pisteitä:
+																	  ${performance.points}`">
+														</span>
+													</li>
+												</template>
+											</ul>
+										</div>
+									</template>
+								</div>
+							</template>
+						</div>
+						<!-- EDITING -->
+						<section x-show="$store.state.editing_id == challenge.id">
+							<div style="padding: 15px">
+								<label for="title">Haasteen nimi:</label><br />
+								<input
+									type="text"
+									name="title"
+									x-model="challenge.title"
+									/><br />
+								<label for="goal">Tavoite pisteet:</label><br />
+								<input
+									type="number"
+									name="goal"
+									x-model.number="challenge.goal_points"
+									/>
+								<br />
+								<span>Ajanjakso:</span><br />
+								<input x-model="challenge.start_date" type="date" />
+								-
+								<input x-model="challenge.end_date" type="date" />
+							</div>
+							<div style="padding: 15px; border-top: 1px solid var(--border)">
+								<button
+									x-on:click="$store.state.editing_id = null;
+                                                updateChallenge($event, challenge.id)"
+									>
+									Tallenna muokkaus
+								</button>
+								<button x-on:click="deleteChallenge($event, challenge.id)">
+									Poista
+								</button>
+							</div>
+						</section>
+					</div>
+				</template>
+			</div>
+			<p x-show="$store.state.challenges.length == 0">Ei haasteita</p>
+			<div>
+				<h2>Käyttäjät</h2>
+				<section x-data="{ adding: false }">
+					<div x-show="adding">
+						<div style="padding: 15px">
+							<label for="name">Käyttäjän nimi:</label><br />
+							<input type="text" name="name" x-model="$store.add.title" />
+							<br />
+						</div>
+						<div style="padding: 15px; border-top: 1px solid var(--border)">
+							<button
+								type="submit"
+								:disabled="true"
+								x-on:click="addChallenge($event);
+											adding = false"
+								>
+								Lisää käyttäjä
+							</button>
+							<button
+								type="submit"
+                                class="secondary-btn"
+								x-on:click="adding = false;
+											clearAdd($event);"
+								>
+								Peruuta
+							</button>
+						</div>
+					</div>
+					<div style="padding: 15px" x-show="!adding">
+						<button type="submit" x-on:click="adding = true">
+							Lisää käyttäjä
+						</button>
+					</div>
+				</section>
+			</div>
+			<div x-show="$store.state.users.length > 0" class="list">
+				<template x-for="user in $store.state.users">
+					<div>
+						<!-- NOT EDITING -->
+						<div x-show="$store.state.editing_user_id != user.id">
+							<div class="item">
+								<div>
+									<strong x-text="user.name"></strong>
+									<span class="badge" x-show="user.is_admin">Ylläpitäjä</span>
+								</div>
+								<button x-on:click="$store.state.editing_user_id = user.id">
+									Muokkaa
+								</button>
+							</div>
+						</div>
+						<!-- EDITING -->
+						<section x-show="$store.state.editing_user_id == user.id">
+							<div style="padding: 15px">
+								<label for="name">Nimi:</label><br />
+								<input x-model="user.name" type="text" /><br />
+								<label for="pass">Uusi salasana:</label><br />
+								<input x-model="user.password_plain" type="pass" /><br />
+								<label>Onko ylläpitäjä:</label>
+								<input
+									x-model="user.is_admin"
+									type="checkbox"
+									:disabled="$store.session.id == user.id"
+									/>
+							</div>
+							<div style="padding: 15px; border-top: 1px solid var(--border)">
+								<button
+									x-on:click="$store.state.editing_user_id = null;
+												updateUser($event, user.id)"
+									>
+									Tallenna muokkaus
+								</button>
+								<button
+									x-on:click="deleteUser($event,
+												user.id)"
+									:disabled="$store.session.id == user.id"
+									:title="($store.session.id == user.id) ? 'Et voi poistaa itseäsi' : ''"
+									>
+									Poista
+								</button>
+							</div>
+						</section>
+					</div>
+				</template>
+			</div>
+		</main>
+	</body>
+	<script>
+		document.addEventListener("alpine:init", async () => {
+			Alpine.store("add", {
+				challenge: {
+					title: "",
+					points: 0,
+					start_date: null,
+					end_date: null,
+				},
+			});
+			Alpine.store("state", {
+				challenges: [],
+				users: [],
+				editing_id: null,
+				editing_user_id: null,
+			});
+			Alpine.store("session", {
+				loggedIn: false,
+				admin: false,
+				id: 0,
+			});
+
+			window.suomiDate = (date) =>
+			date.split("-").reduce((s, t) => (t = `${t}.${s}`));
+			window.isActive = (start, end) =>
+			Date.now() > Date.parse(start) && Date.now() < Date.parse(end);
+
+			async function getChallenges() {
+				try {
+					const response = await fetch("/api/challenges");
+					if (!response.ok) {
+						throw new Error("Jotain meni pieleen: " + response.status);
+					}
+					return await response.json();
+				} catch (e) {
+					console.error(e.message);
+				}
+			}
+
+			async function getUsers() {
+				try {
+					const response = await fetch("/api/users");
+					if (!response.ok) {
+						throw new Error("Jotain meni pieleen: " + response.status);
+					}
+					return await response.json();
+				} catch (e) {
+					console.error(e.message);
+				}
+			}
+
+			Alpine.store("state", {
+				challenges: await getChallenges(),
+				users: await getUsers(),
+				editing_id: null,
+				editing_user_id: null,
+				active: 0,
+			});
+			// Add
+			window.clearAdd = (event) => {
+				Alpine.store("add", {
+					challenge: {
+						title: "",
+						points: 0,
+						start_date: null,
+						end_date: null,
+					},
+				});
+			};
+			window.addChallenge = async (event) => {
+				event.preventDefault();
+				const response = await fetch("/api/challenges", {
+					method: "POST",
+					body: JSON.stringify({
+						title: Alpine.store("add").challenge.title,
+						goal_points: parseInt(Alpine.store("add").challenge.points),
+						start_date: Alpine.store("add").challenge.start_date,
+						end_date: Alpine.store("add").challenge.end_date,
+					}),
+				});
+				clearAdd();
+				Alpine.store("state").challenges = await getChallenges();
+			};
+			// Challenges
+			window.deleteChallenge = async (event, id) => {
+				const response = await fetch(`/api/challenges/${id}`, {
+					method: "DELETE",
+				});
+				Alpine.store("state").challenges = await getChallenges();
+			};
+			window.updateChallenge = async (event, id) => {
+				const challenge = Alpine.store("state").challenges.filter(
+					(challenge) => challenge.id == id,
+				)[0];
+				const response = await fetch(`/api/challenges/`, {
+					method: "PATCH",
+					body: JSON.stringify(challenge),
+				});
+			};
+			// Users
+			window.deleteUser = async (event, id) => {
+				const response = await fetch(`/api/users/${id}`, {
+					method: "DELETE",
+				});
+				Alpine.store("state").users = await getUsers();
+			};
+			window.updateUser = async (event, id) => {
+				const user = Alpine.store("state").users.filter(
+					(user) => user.id == id,
+				)[0];
+				const response = await fetch(`/api/users/`, {
+					method: "PATCH",
+					body: JSON.stringify(user),
+				});
+			};
+			// Session
+			const loggedIn = async (event) => {
+				const res = await fetch("/api/session");
+				const json = await res.json();
+				Alpine.store("session", {
+					loggedIn: await json.ok,
+					admin: await json.admin,
+					id: await json.id,
+				});
+			};
+			await loggedIn();
+		});
+	</script>
+</html>

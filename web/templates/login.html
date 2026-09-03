@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Kirjaudu</title>
+		<link rel="stylesheet" href="static/styles.css" />
+	</head>
+	<body>
+        <main>
+            <h2>Kirjaudu</h2>
+            <section>
+                <form method="POST" action="/login">
+                    <div style="padding: 15px;">
+                        <label>Nimi:</label><br>
+                        <input type="text" name="name" value=""/><br>
+                        <label>Salasana:</label><br>
+                        <input type="password" name="password" value=""/><br>
+                    </div>
+					<div style="padding: 15px; border-top: 1px solid var(--border)">
+                        <button type="submit">Kirjaudu</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+	</body>
+	<script type="text/javascript">
+		const errors = new Map([
+			["missing", "Nimi tai salasana puuttuu"],
+			["invalid", "Salasana tai nimi oli väärin"],
+		]);
+		const params = new URLSearchParams(document.location.search);
+		const errorCode = params.get("err");
+		if (errorCode) {
+			alert(errors.get(errorCode));
+		}
+	</script>
+</html>

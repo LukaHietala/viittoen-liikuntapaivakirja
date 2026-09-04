@@ -93,7 +93,7 @@ func Serve(contentFS fs.FS) http.Handler {
 				Value: token,
 			})
 
-			http.Redirect(w, r, "/profile", 303)
+			http.Redirect(w, r, "/", 303)
 		})
 	})
 

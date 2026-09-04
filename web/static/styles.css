@@ -27,6 +27,11 @@ main {
     gap: 6px;
 }
 
+a {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
 .list {
     display: flex;
     flex-direction: column;
@@ -35,16 +40,44 @@ main {
 
 .item {
     background-color: white;
-    padding: 15px;
     border: 1px solid #e3e3e3;
     border-radius: 5px;
     display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    justify-content: start;
     width: 100%;
     font-size: 1.1em;
 }
+
+.item-actions {
+    display: inline-flex;
+    gap: 6px;
+    border-top: 1px solid var(--border);
+    padding: 15px;
+}
+
+.item-info {
+    padding: 15px;
+}
+
+ @media (min-width: 700px) {
+     .item {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+     }
+    .item-actions {
+        display: inline-flex;
+        gap: 6px;
+        border: none;
+        padding: 0;
+    }
+    .item-info {
+        padding: 0;
+    }
+}
+
 
 .active {
     border: 1px solid var(--primary);
@@ -98,11 +131,12 @@ button:hover {
 }
 
 .icon-btn {
-    padding: 7px 12px;
+    display: flex;
+    padding: 9px;
 }
 
 input {
-    padding: 4px 8px;
+    padding: 6px 10px;
     margin: 4px 0;
     box-sizing: border-box;
     border: 1px solid #ccc;

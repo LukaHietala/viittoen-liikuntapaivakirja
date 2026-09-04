@@ -13,7 +13,10 @@
 	<body x-data="">
 		<main>
 			<div>
-				<h2>Haasteet</h2>
+                <div style="display: inline-flex; gap: 8px; align-items: center;">
+                    <button class="secondary-btn icon-btn" onclick="history.back()"><img src="/static/chevron-back.svg" alt="Takaisin"/></button>
+                    <h2>Haasteet</h2>
+                </div>
 				<section x-data="{ adding: false }">
 					<div x-show="adding">
 						<div style="padding: 15px">
@@ -79,9 +82,7 @@
 			</div>
 			<div x-show="$store.state.challenges.length > 0" class="list">
 				<template x-for="challenge in $store.state.challenges">
-					<div
-						x-data="{ showPerformances : false }"
-                        >
+					<div x-data="{ showPerformances : false }">
 						<!-- NOT EDITING -->
 						<div
 							x-show="$store.state.editing_id !=
@@ -89,12 +90,10 @@
 							:class="isActive(challenge.start_date,
 									challenge.end_date)
 									? 'item active' :
-									'item'"
-							>
-							<div style="align-content: center">
+									'item'">
+							<div class="item-info">
 								<strong x-text="challenge.title"></strong>
-								<span x-text="`- Tavoite: ${challenge.pot}`"></span>
-								/
+								<span x-text="`- Tavoite: ${challenge.pot} /`"></span>
 								<span x-text="challenge.goal_points"></span>
 								-
 								<strong>Tila: </strong>
@@ -115,7 +114,7 @@
 											- ${suomiDate(challenge.end_date)}`">
 								</span>
 							</div>
-                            <div style="display: inline-flex; gap: 6px;">
+                            <div class="item-actions" style="display: inline-flex; gap: 6px;">
 								<button x-on:click="showPerformances = !showPerformances">
 									Suoritukset
 								</button>
@@ -132,13 +131,7 @@
                             <section
                                 style="margin-top: 6px;"
                                 x-data="{
-										map: challenge.performances ?
-										challenge.performances.reduce(
-										((map, x) => (map.get(x.user_id)) ? (
-										map.get(x.user_id).push(x), map ) :
-										(map.set(x.user_id, [x]), map))
-										,new Map())
-										: new Map()
+										map: performanceTree(challenge.performances)
 										}">
                                 <template x-for="value in map">
                                     <!-- alpine boilerplate -->
@@ -192,15 +185,32 @@
 								-
 								<input x-model="challenge.end_date" type="date" />
 							</div>
-							<div style="padding: 15px; border-top: 1px solid var(--border)">
+							<div style="padding: 15px; border-top: 1px solid
+										var(--border)"
+								 x-data="{ confirm: false }">
 								<button
+									x-show="!confirm"
 									x-on:click="$store.state.editing_id = null;
-                                                updateChallenge($event, challenge.id)"
-									>
-									Tallenna muokkaus
+                                                updateChallenge($event, challenge.id)">
+									Tallenna
 								</button>
-								<button x-on:click="deleteChallenge($event, challenge.id)">
+								<button
+									x-show="!confirm"
+									x-on:click="confirm = true">
 									Poista
+								</button>
+								<button
+									x-show="confirm"
+									x-on:click="deleteChallenge($event, challenge.id);
+												confirm = false">
+									Varmista
+								</button>
+								<button
+									x-show="confirm"
+									x-on:click="confirm = false"
+                                    class="secondary-btn"
+                                    >
+									Peruuta
 								</button>
 							</div>
 						</section>
@@ -234,8 +244,7 @@
 								type="submit"
                                 class="secondary-btn"
 								x-on:click="adding = false;
-											clearAdd($event);"
-								>
+											clearAdd($event);">
 								Peruuta
 							</button>
 						</div>
@@ -253,13 +262,15 @@
 						<!-- NOT EDITING -->
 						<div x-show="$store.state.editing_user_id != user.id">
 							<div class="item">
-								<div>
+								<div class="item-info">
 									<strong x-text="user.name"></strong>
 									<span class="badge" x-show="user.is_admin">Ylläpitäjä</span>
 								</div>
-								<button x-on:click="$store.state.editing_user_id = user.id">
-									Muokkaa
-								</button>
+                                <div class="item-actions">
+                                    <button x-on:click="$store.state.editing_user_id = user.id">
+                                        Muokkaa
+                                    </button>
+                                </div>
 							</div>
 						</div>
 						<!-- EDITING -->
@@ -267,8 +278,8 @@
 							<div style="padding: 15px">
 								<label for="name">Nimi:</label><br />
 								<input x-model="user.name" type="text" /><br />
-								<label for="pass">Uusi salasana:</label><br />
-								<input x-model="user.password_plain" type="pass" /><br />
+								<label for="pass">Uusi salasana (valinnainen):</label><br />
+								<input x-model="user.password_plain" /><br />
 								<label>Onko ylläpitäjä:</label>
 								<input
 									x-model="user.is_admin"
@@ -276,19 +287,36 @@
 									:disabled="$store.session.id == user.id"
 									/>
 							</div>
-							<div style="padding: 15px; border-top: 1px solid var(--border)">
+							<div style="padding: 15px; border-top: 1px solid
+										var(--border)"
+								 x-data="{ confirm: false }">
 								<button
+									x-show="!confirm"
 									x-on:click="$store.state.editing_user_id = null;
 												updateUser($event, user.id)">
-									Tallenna muokkaus
+									Tallenna
 								</button>
 								<button
-									x-on:click="deleteUser($event,
-												user.id)"
+									x-show="!confirm"
+									x-on:click="confirm = true"
 									:disabled="$store.session.id == user.id"
 									:title="($store.session.id == user.id) ?
 											'Et voi poistaa itseäsi' : ''">
 									Poista
+								</button>
+								<button
+									x-show="confirm"
+									x-on:click="deleteUser($event,
+												user.id);
+												confirm = false">
+									Varmista
+								</button>
+								<button
+									x-show="confirm"
+									x-on:click="confirm = false"
+                                    class="secondary-btn"
+                                    >
+									Peruuta
 								</button>
 							</div>
 						</section>
@@ -329,6 +357,16 @@
 			window.isActive = (start, end) => (
 				Date.now() > Date.parse(start) && Date.now() < Date.parse(end)
 			);
+            // Herkullista
+			window.performanceTree = (performances) => (
+				performances ?
+					performances.reduce(
+						((map, x) => (map.get(x.user_id))
+						 ? (map.get(x.user_id).push(x), map )
+						 : (map.set(x.user_id, [x]), map))
+						, new Map())
+					: new Map()
+			)
 
 			async function getChallenges() {
 				try {

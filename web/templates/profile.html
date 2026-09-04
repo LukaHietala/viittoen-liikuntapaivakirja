@@ -10,7 +10,10 @@
 	</head>
 	<body>
         <main x-data="">
-            <h2>Profiili (Jaakko)</h2> 
+            <div style="display: inline-flex; gap: 8px; align-items: center;">
+                <button class="secondary-btn icon-btn" onclick="history.back()"><img src="/static/chevron-back.svg" alt="Takaisin"/></button>
+                <h2>Haasteet</h2>
+            </div>
             <section style="padding: 15px;">
                 <span x-text="`Keräämäsi pisteet:
 							  ${sumPerformances($store.state.self.performances)}`">
@@ -18,18 +21,21 @@
             </section>
             <!-- LUUKAS ÄLÄ NÄYTÄ JOS EI HAASTEITA -->
             <h3>Suorituksesi</h3>
-            <!-- LUUKAS FOR TÄHÄN -->
-            <div class="list">
-                <div class="item">
-                    <div>
-                        <span>2026-09-20 11:11:11</span>
-                        <span>Pisteet: 1</span>
-                    </div>
-                    <button>
-                        <!-- LUUKAS HAE HAASTE -->
-                        Näytä haaste
-                    </button>
-                </div>
+            <div>
+				<template x-for="performance in $store.state.self.performances" class="list">
+					<div class="item">
+						<div class="item-info">
+							<span>Pisteet: <strong x-text="performance.points"></strong></span>
+							<span> - Suoritettu <strong x-text="performance.created_at"></strong></span>
+						</div>
+                        <div class="item-actions">
+                            <button>
+                                <!-- LUUKAS HAE HAASTE -->
+                                Näytä haaste
+                            </button>
+                        </div>
+					</div>
+				</template>
             </div>
 
         </main>

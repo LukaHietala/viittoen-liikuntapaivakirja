@@ -169,6 +169,9 @@ func GetSelf(ctx context.Context) (*User, error) {
 		SELECT * FROM performances
 		WHERE user_id = ?`, u.ID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 

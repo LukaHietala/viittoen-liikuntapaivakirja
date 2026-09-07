@@ -38,17 +38,13 @@ func Serve(contentFS fs.FS) http.Handler {
 		})
 
 		r.Get("/logout", func(w http.ResponseWriter, r *http.Request) {
-			http.SetCookie(w, &http.Cookie{
-				HttpOnly: true,
-				MaxAge:   -1,
-				SameSite: http.SameSiteLaxMode,
-				// Uncomment below for HTTPS:
-				// Secure: true,
-				Name:  "jwt",
-				Value: "",
-			})
-
+			ResetJWTCookies(w)
 			http.Redirect(w, r, "/", 303)
+		})
+		
+		r.Get("/challenges", func(w http.ResponseWriter, r *http.Request) {
+			// TODO: Rename html 
+			http.ServeFileFS(w, r, templateFS, "chanllenges.html")
 		})
 	})
 
@@ -111,30 +107,35 @@ func Serve(contentFS fs.FS) http.Handler {
 	})
 
 	r.Route("/api", func(r chi.Router) {
-		r.Route("/challenges", func(r chi.Router) {
-			r.Route("/active", func(r chi.Router) {
-				r.Get("/", GetActiveChallenges)
+		r.Group(func(r chi.Router) {
+			r.Use(SessionOnly)
+
+			r.Route("/challenges", func(r chi.Router) {
+				r.Route("/active", func(r chi.Router) {
+					r.Get("/", GetActiveChallenges)
+				})
+				r.Get("/latest", GetLatestChallenge)
+				r.Get("/", GetChallenges)
+				r.Post("/", CreateChallenge)
+				r.Patch("/", UpdateChallenge)
+				r.Get("/{id}", GetChallenge)	
+				r.Delete("/{id}", DeleteChallenge)
 			})
-			r.Get("/", GetChallenges)
-			r.Post("/", CreateChallenge)
-			r.Patch("/", UpdateChallenge)
-			r.Get("/{id}", GetChallenge)	
-			r.Delete("/{id}", DeleteChallenge)
-		})
-		r.Route("/performances", func(r chi.Router) {
-			r.Post("/", CreatePerformance)
-		})
-		r.Route("/users", func(r chi.Router) {
-			r.Get("/", GetUsers)
-			r.Patch("/", UpdateUser)
-			r.Post("/", CreateUser)
-			r.Delete("/{id}", DeleteUser)
-		})
-		r.Route("/session", func(r chi.Router) {
-			r.Get("/", ValidSession)
-		})
-		r.Route("/self", func(r chi.Router) {
-			r.Get("/", GetSelf)
+			r.Route("/performances", func(r chi.Router) {
+				r.Post("/", CreatePerformance)
+			})
+			r.Route("/users", func(r chi.Router) {
+				r.Get("/", GetUsers)
+				r.Patch("/", UpdateUser)
+				r.Post("/", CreateUser)
+				r.Delete("/{id}", DeleteUser)
+			})
+			r.Route("/session", func(r chi.Router) {
+				r.Get("/", ValidSession)
+			})
+			r.Route("/self", func(r chi.Router) {
+				r.Get("/", GetSelf)
+			})
 		})
 	})
 
@@ -386,6 +387,19 @@ func DeleteChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func GetLatestChallenge(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	challenge, err := db.GetLatestChallenge(ctx)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(challenge)
+}
+
 
 func CreatePerformance(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()

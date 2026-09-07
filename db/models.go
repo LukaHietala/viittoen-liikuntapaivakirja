@@ -14,15 +14,16 @@ type User struct {
 	ID            int            `json:"id"`
 	Name          string         `json:"name"`
 	PasswordHash  string         `json:"password_hash,omitempty"`
-	PasswordPlain string         `json:"password_plain,,omitempty"`
-	IsAdmin       bool           `json:"is_admin"`
+	PasswordPlain string         `json:"password_plain,omitempty"`
+	IsAdmin       bool           `json:"is_admin,omitempty"`
 	Performances  []*Performance `json:"performances"`
 }
 
 type Performance struct {
-	ID          int      `json:"id"`
-	Points      int      `json:"points"`
+	ID          int    `json:"id"`
+	Points      int    `json:"points"`
 	CreatedAt   string `json:"created_at"`
-	UserID      int      `json:"user_id"`
-	ChallengeID int      `json:"challenge_id"`
+	UserID      int    `json:"user_id"`
+	ChallengeID int    `json:"challenge_id"`
+	User        *User  `json:"user"`
 }

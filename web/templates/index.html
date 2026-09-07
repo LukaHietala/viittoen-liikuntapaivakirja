@@ -9,18 +9,22 @@
         <link rel="stylesheet" href="static/styles.css" />
 	<body x-data="">
         <main>
-            <h2>Aktiiviset haasteet</h2>
+			<h2 x-show="$store.session.loggedIn">Aktiiviset haasteet</h2>
 			<section x-show="!$store.session.loggedIn" style="padding: 15px;">
 				<p style="margin: 0;">
-					Jos haluat lisätä suorituksia sinun <strong>täytyy</strong>
+					Jos haluat nähdä tai lisätä suorituksia sinun täytyy
 					<a href="/login">kirjautua</a>. Jos sinulla ei ole käyttäjää pyydä ylläpitäjää luomaan se.
 				</p>
-			
+			</section>
+            <section x-show="$store.session.loggedIn" style="padding: 15px;">
+				<p style="margin: 0;">
+					Katso aiemmat suorituksesi ja tilastosi <a href="/profile">profiilistasi</a>.
+                </p>
 			</section>
             <div x-show="$store.state.challenges.length > 0" class="list">
                 <template x-for="challenge in $store.state.challenges" >
                     <div class="item">
-                        <div>
+                        <div class="item-info">
                             <strong x-text="challenge.title"></strong>
                             <span x-text="`- Tavoite: ${challenge.pot}`"></span>
                             /
@@ -30,7 +34,7 @@
                                 Edistys mittari
                             </progress>
                         </div>
-                        <div x-show="$store.session.loggedIn" x-data="{ confirm: false }">
+                        <div x-show="$store.session.loggedIn" x-data="{ confirm: false }" class="item-actions">
                             <button x-show="!confirm" x-on:click="confirm = !confirm">Lisää suoritus</button>
                             <button x-show="confirm" x-on:click="confirm =
                                                                  false" class="secondary-btn">

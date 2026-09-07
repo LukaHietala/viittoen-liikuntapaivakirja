@@ -1,62 +1,72 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<script defer
-            src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" ></script>
-		<title>Profiili</title>
-        <link rel="stylesheet" href="static/styles.css" />
-	</head>
-	<body>
-        <main x-data="">
-            <div style="display: inline-flex; gap: 8px; align-items: center;">
-                <button class="secondary-btn icon-btn" onclick="history.back()"><img src="/static/chevron-back.svg" alt="Takaisin"/></button>
-                <h2>Haasteet</h2>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+    ></script>
+    <title>Profiili</title>
+    <link rel="stylesheet" href="static/styles.css" />
+  </head>
+  <body>
+    <main x-data="">
+      <div style="display: inline-flex; gap: 8px; align-items: center">
+        <button class="secondary-btn icon-btn" onclick="history.back()">
+          <img src="/static/chevron-back.svg" alt="Takaisin" />
+        </button>
+        <h2>Haasteet</h2>
+      </div>
+      <section style="padding: 15px">
+        <span
+          x-text="`Keräämäsi pisteet:
+							  ${sumPerformances($store.state.self.performances)}`"
+        >
+        </span>
+      </section>
+      <!-- LUUKAS ÄLÄ NÄYTÄ JOS EI HAASTEITA -->
+      <h3>Suorituksesi</h3>
+      <div class="list">
+        <template x-for="performance in $store.state.self.performances">
+          <div class="item">
+            <div class="item-info">
+              <span
+                >Pisteet: <strong x-text="performance.points"></strong
+              ></span>
+              <span>
+                - Suoritettu <strong x-text="performance.created_at"></strong
+              ></span>
             </div>
-            <section style="padding: 15px;">
-                <span x-text="`Keräämäsi pisteet:
-							  ${sumPerformances($store.state.self.performances)}`">
-				</span>
-            </section>
-            <!-- LUUKAS ÄLÄ NÄYTÄ JOS EI HAASTEITA -->
-            <h3>Suorituksesi</h3>
-            <div>
-				<template x-for="performance in $store.state.self.performances" class="list">
-					<div class="item">
-						<div class="item-info">
-							<span>Pisteet: <strong x-text="performance.points"></strong></span>
-							<span> - Suoritettu <strong x-text="performance.created_at"></strong></span>
-						</div>
-                        <div class="item-actions">
-                            <button>
-                                <!-- LUUKAS HAE HAASTE -->
-                                Näytä haaste
-                            </button>
-                        </div>
-					</div>
-				</template>
+            <div class="item-actions">
+              <button>
+                <!-- LUUKAS HAE HAASTE -->
+                Näytä haaste
+              </button>
             </div>
+          </div>
+        </template>
+      </div>
+    </main>
+  </body>
+  <script type="text/javascript">
+    document.addEventListener("alpine:init", async () => {
+      Alpine.store("state", {
+        self: {
+          performances: [],
+        },
+      });
 
-        </main>
-	</body>
-	<script type="text/javascript">
-		document.addEventListener('alpine:init', async () => {
-			Alpine.store('state', {
-				self: {
-					performances: []
-				}
-			});
+      window.sumPerformances = (performances) =>
+        performances.reduce((sum, x) => sum + x.points, 0);
 
-			window.sumPerformances = (performances) => performances.reduce((sum, x) => sum + x.points, 0);
-			
-			const getProfile = async (event) => {
-				const res = await fetch("/api/self");
-				Alpine.store('state', {
-					self: await res.json()
-				});
-			};
-			await getProfile();
-		});
-	</script>
+      const getProfile = async (event) => {
+        const res = await fetch("/api/self");
+        Alpine.store("state", {
+          self: await res.json(),
+        });
+      };
+      await getProfile();
+    });
+  </script>
 </html>

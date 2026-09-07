@@ -76,6 +76,7 @@ func GetAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
 				return nil, err
 			}
 			pot += p.Points
+			
 			c.Performances = append(c.Performances, p)
 		}
 
@@ -84,10 +85,29 @@ func GetAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
 			return nil, err
 		}
 
+		for _, p := range c.Performances {
+			u := new(User)
+			err := DB.QueryRowContext(ctx, `
+				SELECT id, name FROM users WHERE id = ?
+			`, p.UserID).Scan(&u.ID, &u.Name)
+			if err == nil {
+				p.User = u
+			}
+		}
+
 		pRows.Close()
 		c.Pot = pot
 	}
 	return challenges, nil
+}
+
+func GetLatestChallenge(ctx context.Context) (*Challenge, error) {
+	c := new(Challenge)
+	err := DB.QueryRowContext(ctx, "SELECT * FROM challenges LIMIT 1").Scan(&c.ID, &c.Title, &c.GoalPoints, &c.StartDate, &c.EndDate)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
 }
 
 func AddChallenge(c *Challenge) error {

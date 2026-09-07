@@ -24,9 +24,9 @@
 							<input type="text" name="name"
 								   x-model="$store.add.user.name" />
 							<br/>
-							<label for="password">Salasana:</label><br />
-							<input type="text" name="password"
-								   x-model="$store.add.user.password" />
+							<label for="email">Email:</label><br />
+							<input type="email" name="email"
+								   x-model="$store.add.user.email" />
 						</div>
 						<div style="padding: 15px; border-top: 1px solid var(--border)">
 							<button
@@ -130,7 +130,7 @@
 			Alpine.store("add", {
 				user: {
 					name: "",
-					password: createRandomPassword(5)
+					email: ""
 				}
 			});
 			Alpine.store("state", {
@@ -172,7 +172,7 @@
 				Alpine.store("add", {
 					user: {
 						name: "",
-						password: createRandomPassword(5)
+						password: ""
 					}
 				});
 			};
@@ -181,7 +181,7 @@
 					method: "POST",
 					body: JSON.stringify({
 						name: Alpine.store("add").user.name,
-						password_plain: Alpine.store("add").user.password,
+						password_plain: Alpine.store("add").user.email,
 					}),
 				});
 				clearAdd();

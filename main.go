@@ -12,6 +12,7 @@ import (
 
 	"github.com/LukaHietala/viittoen-liikuntapaivakirja/api"
 	"github.com/LukaHietala/viittoen-liikuntapaivakirja/db"
+	"github.com/LukaHietala/viittoen-liikuntapaivakirja/services"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -19,18 +20,23 @@ import (
 var contentFS embed.FS
 
 func main() {
-	api.InitAuth("salaisuus")
+	cfg, err := services.LoadEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
+	//ms := services.NewMailService(cfg.MailgunAPIKey, cfg.MailgunDomain)
+	api.InitAuth(cfg.JWTSecret)
 	server := &http.Server{
 		Addr:    "0.0.0.0:3000",
 		Handler: api.Serve(contentFS),
 	}
 
-	d, err := db.Connect()
+	conn, err := db.Connect()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer d.Close()
-	db.DB = d
+	defer conn.Close()
+	db.DB = conn
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

@@ -5,8 +5,8 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<script
 			defer
-			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
-			></script>
+			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js">
+		</script>
 		<link rel="stylesheet" href="static/styles.css" />
 		<title>Muokkaa haasteet</title>
 	</head>
@@ -14,7 +14,10 @@
 		<main>
 			<div>
                 <div style="display: inline-flex; gap: 8px; align-items: center;">
-                    <button class="secondary-btn icon-btn" onclick="history.back()"><img src="/static/chevron-back.svg" alt="Takaisin"/></button>
+                    <button class="secondary-btn icon-btn"
+							onclick="history.back()">
+						<img src="/static/chevron-back.svg" alt="Takaisin"/>
+					</button>
                     <h2>Haasteet</h2>
                 </div>
 				<section x-data="{ adding: false }">
@@ -24,28 +27,28 @@
 							<input
 								type="text"
 								name="title"
-								x-model="$store.add.challenge.title"
-								/><br />
+								x-model="$store.add.challenge.title"/>
+							<br/>
 							<label for="points">Tavoite pisteet:</label><br />
 							<input
 								type="number"
 								name="points"
-								x-model.number="$store.add.challenge.points"
-								/><br />
-							<label for="start_date">Aloitus</label><br />
+								x-model.number="$store.add.challenge.points"/><br />
+							<label for="start_date">Aloitus</label>
+							<br/>
 							<input
 								type="date"
 								name="start_date"
 								value=""
-								x-model="$store.add.challenge.start_date"
-								/><br />
-							<label for="end_date">Lopetus</label><br />
+								x-model="$store.add.challenge.start_date"/>
+							<br/>
+							<label for="end_date">Lopetus</label>
+							<br/>
 							<input
 								type="date"
 								name="end_date"
 								value=""
-								x-model="$store.add.challenge.end_date"
-								/>
+								x-model="$store.add.challenge.end_date"/>
 						</div>
 						<div style="padding: 15px; border-top: 1px solid var(--border)">
 							<button
@@ -67,8 +70,7 @@
 								type="submit"
                                 class="secondary-btn"
 								x-on:click="adding = false;
-											clearAdd($event);"
-								>
+											clearAdd($event);">
 								Peruuta
 							</button>
 						</div>
@@ -215,8 +217,7 @@
 									<button
 										x-show="confirm"
 										x-on:click="confirm = false"
-										class="secondary-btn"
-										>
+										class="secondary-btn">
 										Peruuta
 									</button>
 								</div>

@@ -277,6 +277,8 @@ func GetChallenge(w http.ResponseWriter, r *http.Request) {
 func CreateUser(w http.ResponseWriter, r *http.Request) {
 	var req db.User
 
+	// TODO: Email
+
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		log.Println(err)

@@ -19,6 +19,7 @@ func Connect() (*sql.DB, error) {
 		CREATE TABLE IF NOT EXISTS users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT NOT NULL,
+			email TEXT NOT NULL,
 			password_hash TEXT NOT NULL,
 			is_admin BOOLEAN NOT NULL DEFAULT FALSE
 		);
@@ -41,11 +42,14 @@ func Connect() (*sql.DB, error) {
 			FOREIGN KEY(challenge_id) REFERENCES challenges(id)
 		);
 
-		INSERT INTO users VALUES(NULL, "Jaakko", "$2a$14$dhSvJi8wLpc0iAB5LW91Le4GKK/w9i7IKyZ6tgE7L8xnW4b2S2/lG", TRUE);
-		INSERT INTO users VALUES(NULL, "Tero", "$2a$14$dhSvJi8wLpc0iAB5LW91Le4GKK/w9i7IKyZ6tgE7L8xnW4b2S2/lG", TRUE);
+		INSERT INTO users VALUES(NULL, "Jaakko", "jaakko@cat-v.org", "$2a$14$dhSvJi8wLpc0iAB5LW91Le4GKK/w9i7IKyZ6tgE7L8xnW4b2S2/lG", TRUE);
+		INSERT INTO users VALUES(NULL, "Tero", "tero@cat-v.org", "$2a$14$dhSvJi8wLpc0iAB5LW91Le4GKK/w9i7IKyZ6tgE7L8xnW4b2S2/lG", TRUE);
+		INSERT INTO users VALUES(NULL, "Luka", "luka.hietala08@gmail.com", "$2a$14$dhSvJi8wLpc0iAB5LW91Le4GKK/w9i7IKyZ6tgE7L8xnW4b2S2/lG", TRUE);
 		INSERT INTO challenges VALUES(NULL, "Syö paljon leipää", 3, "2026-09-01", "2026-09-10");
 		INSERT INTO challenges VALUES(NULL, "Käy suihkussa", 1, "2026-08-01", "2026-09-25");
+		INSERT INTO challenges VALUES(NULL, "Sammuta Lukan koti", 15, "2026-06-01", "2026-07-25");
 		INSERT INTO performances(points, user_id, challenge_id) VALUES (2, 1, 1);
+		INSERT INTO performances(points, user_id, challenge_id) VALUES (5, 2, 3);
 	`)
 	if err != nil {
 		return nil, err

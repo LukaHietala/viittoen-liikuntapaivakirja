@@ -5,12 +5,13 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/LukaHietala/viittoen-liikuntapaivakirja/services"
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
 func GetAllUsers() ([]*User, error) {
-	rows, err := DB.Query(`SELECT * FROM users`)
+	rows, err := DB.Query(`SELECT id, name, email, is_admin FROM users`)
 	if err != nil {
 		return nil, err
 	}
@@ -19,7 +20,7 @@ func GetAllUsers() ([]*User, error) {
 	users := make([]*User, 0)
 	for rows.Next() {
 		u := new(User)
-		err := rows.Scan(&u.ID, &u.Name, &u.PasswordHash, &u.IsAdmin)
+		err := rows.Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin)
 		if err != nil {
 			return nil, err
 		}
@@ -61,7 +62,7 @@ func GetAllUsers() ([]*User, error) {
 
 func GetUser(id int) (*User, error) {
 	u := new(User)
-	err := DB.QueryRow("SELECT * FROM users WHERE id = ? LIMIT 1", id).Scan(&u.ID, &u.Name, &u.PasswordHash, &u.IsAdmin)
+	err := DB.QueryRow("SELECT id, name, email, is_admin FROM users WHERE id = ? LIMIT 1", id).Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("no user found based on id: %d", id)
@@ -71,15 +72,22 @@ func GetUser(id int) (*User, error) {
 	return u, nil
 }
 
-func AddUser(u *User) error {
-	hash, err := HashPassword(u.PasswordPlain)
+func AddUser(u *User, ms *services.MailService) error {
+	plain := RandomString(5)
+	hash, err := HashPassword(plain)
 	if err != nil {
 		return err
 	}
-	_, err = DB.Exec(`
-		INSERT INTO users(name, password_hash, is_admin)
-		VALUES(?, ?, ?)`, u.Name, hash, u.IsAdmin)
 
+	_, err = DB.Exec(`
+		INSERT INTO users(name, email, password_hash, is_admin)
+		VALUES(?, ?, ?, ?)`, u.Name, u.Email, hash, u.IsAdmin)
+
+	if err != nil {
+		return err
+	}
+	// TODO:template
+	err = ms.Send("Käyttäjätunnukset", plain, u.Email)
 	if err != nil {
 		return err
 	}
@@ -101,20 +109,10 @@ func UpdateUser(ctx context.Context, u *User) error {
 		return fmt.Errorf("can't remove own admin privileges")
 	}
 
-	var err error
-	var hash string
-	if u.PasswordPlain != "" {
-		hash, err = HashPassword(u.PasswordPlain)
-		_, err = DB.ExecContext(ctx, `
-		UPDATE users
-		SET name = ?, password_hash = ?, is_admin = ?
-		WHERE id = ?`, u.Name, hash, u.IsAdmin, u.ID)
-	} else {
-		_, err = DB.ExecContext(ctx, `
-		UPDATE users
-		SET name = ?, is_admin = ?
-		WHERE id = ?`, u.Name, u.IsAdmin, u.ID)
-	}
+	_, err := DB.ExecContext(ctx, `
+	UPDATE users
+	SET name = ?, email = ?, is_admin = ?
+	WHERE id = ?`, u.Name, u.Email, u.IsAdmin, u.ID)
 
 	// TODO: forgot pass
 	if err != nil {
@@ -161,7 +159,7 @@ func GetSelf(ctx context.Context) (*User, error) {
 	}
 
 	u := new(User)
-	err := DB.QueryRow("SELECT id, name, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.Name, &u.IsAdmin)
+	err := DB.QueryRow("SELECT id, name, email, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.Email, &u.Name, &u.IsAdmin)
 	if err != nil {
 		return nil, err
 	}
@@ -207,8 +205,8 @@ func GetSession(id int) (*User, error) {
 
 func VerifyUser(name, password string) (int, error) {
 	u := new(User)
-	row := DB.QueryRow("SELECT * FROM users WHERE name = ?", name)
-	err := row.Scan(&u.ID, &u.Name, &u.PasswordHash, &u.IsAdmin)
+	row := DB.QueryRow("SELECT id, name, password_hash FROM users WHERE name = ?", name)
+	err := row.Scan(&u.ID, &u.Name, &u.PasswordHash)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -222,4 +220,52 @@ func VerifyUser(name, password string) (int, error) {
 	} else {
 		return 0, fmt.Errorf("wrong password")
 	}
+}
+
+func StartResetPassword(email, token string, ms *services.MailService) error {
+	u := new(User)
+	row := DB.QueryRow("SELECT id FROM users WHERE email = ?", email)
+	err := row.Scan(&u.ID)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("no user found with the email of: %s", email)
+		}
+		return err
+	}
+
+	resetLink := "http://localhost:3000/reset-password?token=" + token
+
+	err = ms.Send("Nollaa salasana", resetLink, email)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func FinishResetPassword(token jwt.Token, newPassword string) error {
+	var email string
+
+	err := token.Get(`email`, &email)
+	if err != nil {
+		return err
+	}
+
+	hash, err := HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+
+	_, err = DB.Exec(`
+	UPDATE users
+	SET password_hash = ?
+	WHERE email = ?`, hash, email)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+
 }

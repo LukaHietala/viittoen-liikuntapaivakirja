@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	mailgun "github.com/mailgun/mailgun-go/v5"
@@ -23,7 +22,7 @@ func NewMailService(apiKey, domain string) *MailService {
 	}
 }
 
-func (ms *MailService) Send(subject, body, recipient string) {
+func (ms *MailService) Send(subject, body, recipient string) error {
 	// mg.SetAPIBase(mailgun.APIBaseEU)
 
 	sender := "<postmaster@sandbox7d3f343edb8f4122af4777d52f9b6aa5.mailgun.org>"
@@ -32,10 +31,11 @@ func (ms *MailService) Send(subject, body, recipient string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	resp, err := ms.client.Send(ctx, message)
+	_, err := ms.client.Send(ctx, message)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+	fmt.Printf("sent email, to: %s subject: %s, body: %s", message.To(), message.Subject(), message.Text())
 
-	fmt.Printf("ID: %s Resp: %s\n", resp.ID, resp.Message)
+	return nil
 }

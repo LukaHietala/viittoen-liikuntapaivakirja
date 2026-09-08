@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -10,7 +11,9 @@ import (
 
 func GetChallenge(ctx context.Context, id int) (*Challenge, error) {
 	c := new(Challenge)
-	err := DB.QueryRowContext(ctx, "SELECT * FROM challenges WHERE id = ? LIMIT 1", id).Scan(&c.ID, &c.Title, &c.GoalPoints, &c.StartDate, &c.EndDate)
+	err := DB.QueryRowContext(ctx,
+		"SELECT * FROM challenges WHERE id = ? LIMIT 1", id).
+		Scan(&c.ID, &c.Title, &c.GoalPoints, &c.StartDate, &c.EndDate)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +30,8 @@ func GetAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
 	challenges := make([]*Challenge, 0)
 	for rows.Next() {
 		c := new(Challenge)
-		err := rows.Scan(&c.ID, &c.Title, &c.GoalPoints, &c.StartDate, &c.EndDate)
+		err := rows.Scan(&c.ID, &c.Title, &c.GoalPoints,
+			&c.StartDate, &c.EndDate)
 		if err != nil {
 			return nil, err
 		}
@@ -70,13 +74,14 @@ func GetAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
 
 		for pRows.Next() {
 			p := new(Performance)
-			err = pRows.Scan(&p.ID, &p.Points, &p.UserID, &p.ChallengeID, &p.CreatedAt)
+			err = pRows.Scan(&p.ID, &p.Points, &p.UserID,
+				&p.ChallengeID, &p.CreatedAt)
 			if err != nil {
 				pRows.Close()
 				return nil, err
 			}
 			pot += p.Points
-			
+
 			c.Performances = append(c.Performances, p)
 		}
 
@@ -103,10 +108,57 @@ func GetAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
 
 func GetLatestChallenge(ctx context.Context) (*Challenge, error) {
 	c := new(Challenge)
-	err := DB.QueryRowContext(ctx, "SELECT * FROM challenges LIMIT 1").Scan(&c.ID, &c.Title, &c.GoalPoints, &c.StartDate, &c.EndDate)
+	err := DB.QueryRowContext(ctx,
+		"SELECT * FROM challenges WHERE date() > end_date LIMIT 1").
+		Scan(&c.ID, &c.Title, &c.GoalPoints, &c.StartDate, &c.EndDate)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var pRows *sql.Rows
+	pRows, err = DB.QueryContext(ctx, `
+			SELECT * FROM performances
+			WHERE challenge_id = ?`, c.ID)
 	if err != nil {
 		return nil, err
 	}
+
+	var pot int
+
+	for pRows.Next() {
+		p := new(Performance)
+		err = pRows.Scan(&p.ID, &p.Points, &p.UserID,
+			&p.ChallengeID, &p.CreatedAt)
+		if err != nil {
+			pRows.Close()
+			return nil, err
+		}
+		pot += p.Points
+
+		c.Performances = append(c.Performances, p)
+	}
+
+	if err := pRows.Err(); err != nil {
+		pRows.Close()
+		return nil, err
+	}
+
+	for _, p := range c.Performances {
+		u := new(User)
+		err := DB.QueryRowContext(ctx, `
+				SELECT id, name FROM users WHERE id = ?
+			`, p.UserID).Scan(&u.ID, &u.Name)
+		if err == nil {
+			p.User = u
+		}
+	}
+
+	pRows.Close()
+	c.Pot = pot
+
 	return c, nil
 }
 

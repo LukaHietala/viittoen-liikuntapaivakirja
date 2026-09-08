@@ -13,12 +13,14 @@
 			<section x-show="!$store.session.loggedIn" style="padding: 15px;">
 				<p style="margin: 0;">
 					Jos haluat nähdä tai lisätä suorituksia sinun täytyy
-					<a href="/login">kirjautua</a>. Jos sinulla ei ole käyttäjää pyydä ylläpitäjää luomaan se.
+					<a href="/login">kirjautua</a>.
+					Jos sinulla ei ole käyttäjää pyydä ylläpitäjää luomaan se.
 				</p>
 			</section>
             <section x-show="$store.session.loggedIn" style="padding: 15px;">
 				<p style="margin: 0;">
-					Katso aiemmat suorituksesi ja tilastosi <a href="/profile">profiilistasi</a>.
+					Katso aiemmat suorituksesi ja tilastosi
+					<a href="/profile">profiilistasi</a>.
                 </p>
 			</section>
             <div x-show="$store.state.challenges.length > 0" class="list">
@@ -34,10 +36,15 @@
                                 Edistys mittari
                             </progress>
                         </div>
-                        <div x-show="$store.session.loggedIn" x-data="{ confirm: false }" class="item-actions">
-                            <button x-show="!confirm" x-on:click="confirm = !confirm">Lisää suoritus</button>
-                            <button x-show="confirm" x-on:click="confirm =
-                                                                 false" class="secondary-btn">
+                        <div x-show="$store.session.loggedIn"
+							 x-data="{ confirm: false }" class="item-actions">
+                            <button x-show="!confirm"
+									x-on:click="confirm = !confirm">
+								Lisää suoritus
+							</button>
+                            <button x-show="confirm"
+									x-on:click="confirm = false"
+									class="secondary-btn">
                                 Peruuta
                             </button>
                             <button x-show="confirm"
@@ -55,6 +62,37 @@
                     <h2>Ei ole aktiivisia haasteita</h2>
                 </div>
             </template>
+			<section>
+				<template x-if="$store.state.lastActive != null">
+					<div x-data="{ leaderboard :
+								 leaderboard($store.state.lastActive.performances)
+								 }">
+						<p>
+							Viime haasteen tilastot:
+						</p>
+						<p x-text="$store.state.lastActive.title"></p>
+						<p x-text="$store.state.lastActive.goal_points"></p>
+						<p>
+							Listat
+						</p>
+						<ul>
+							<template x-for="student in leaderboard">
+								<li>
+									<p>
+										<span x-text="student[0]"></span>
+										:
+										
+										<span x-text="student[1]"></span>
+									</p>
+								</li>
+							</template>
+						</ul>
+					</div>
+				</template>
+				<p x-show="$store.state.lastActive == null">
+					Historiassa ei haaste `SQL INSERT kikkeli`
+				</p>
+			</section>
         </main>
 	</body>
 	<script>
@@ -64,10 +102,20 @@
 			});
 			
 			Alpine.store('state', {
-				challenges: []
+				challenges: [],
+				lastActive: null
 			});
+
+			window.leaderboard = performances => {
+				m = new Map();
+				performances.map((x) => {
+					v = m.get(x.user.name) || 0;
+					m.set(x.user.name, v + x.points);
+				});
+				return m;
+			}
 			
-			async function getChallenge() { 
+			async function getChallenges() { 
 				try {
 					const response = await fetch("/api/challenges/active");
 					if (!response.ok) {
@@ -78,9 +126,22 @@
     				console.error(e.message);
                 }
 			}
+			
+			async function getLast() { 
+				try {
+					const response = await fetch("/api/challenges/latest");
+					if (!response.ok) {
+						throw new Error("Jotain meni pieleen: " + response.status);
+					}
+					return await response.json()
+				} catch (e) {
+    				console.error(e.message);
+                }
+			}
 
 			Alpine.store('state', {
-				challenges: await getChallenge()
+				challenges: await getChallenges(),
+				lastActive: await getLast()
 			});
 
 			window.addPerformance = async (event, challenge_id) => {
@@ -91,7 +152,7 @@
 						challenge_id: challenge_id
 					}) 
 				});
-				Alpine.store('state').challenges = await getChallenge();
+				Alpine.store('state').challenges = await getChallenges();
 			};
 
 			const loggedIn = async (event) => {
@@ -103,7 +164,6 @@
 				});
 			};
 			await loggedIn();
-
 		});
 	</script>
 </html>

@@ -24,11 +24,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	//ms := services.NewMailService(cfg.MailgunAPIKey, cfg.MailgunDomain)
+	ms := services.NewMailService(cfg.MailgunAPIKey, cfg.MailgunDomain)
 	api.InitAuth(cfg.JWTSecret)
 	server := &http.Server{
 		Addr:    "0.0.0.0:3000",
-		Handler: api.Serve(contentFS),
+		Handler: api.Serve(contentFS, ms),
 	}
 
 	conn, err := db.Connect()

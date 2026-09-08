@@ -1,6 +1,8 @@
 package db
 
 import (
+	"crypto/rand"
+	"fmt"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -18,6 +20,13 @@ func IsValidDate(dateString string) bool {
 		return false
 	}
 	return true
+}
+
+// For passwords
+func RandomString(length int) string {
+	b := make([]byte, length+2)
+	rand.Read(b)
+	return fmt.Sprintf("%x", b)[2 : length+2]
 }
 
 func HashPassword(password string) (string, error) {

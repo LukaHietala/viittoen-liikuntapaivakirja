@@ -204,12 +204,6 @@
 				});
 			};
 
-			function createRandomPassword(length) {
-                const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-				return [...Array(length).keys()].map(()=>
-					chars.charAt(Math.floor(Math.random() * chars.length))).join("");
-            }
-
 			// Session
 			const loggedIn = async (event) => {
 				const res = await fetch("/api/session");

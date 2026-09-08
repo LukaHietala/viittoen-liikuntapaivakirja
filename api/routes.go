@@ -5,19 +5,21 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"net/mail"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/LukaHietala/viittoen-liikuntapaivakirja/db"
+	"github.com/LukaHietala/viittoen-liikuntapaivakirja/services"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
-func Serve(contentFS fs.FS) http.Handler {
+func Serve(contentFS fs.FS, ms *services.MailService) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
@@ -41,9 +43,9 @@ func Serve(contentFS fs.FS) http.Handler {
 			ResetJWTCookies(w)
 			http.Redirect(w, r, "/", 303)
 		})
-		
+
 		r.Get("/challenges", func(w http.ResponseWriter, r *http.Request) {
-			// TODO: Rename html 
+			// TODO: Rename html
 			http.ServeFileFS(w, r, templateFS, "chanllenges.html")
 		})
 	})
@@ -51,46 +53,30 @@ func Serve(contentFS fs.FS) http.Handler {
 	// No access with valid session
 	r.Group(func(r chi.Router) {
 		r.Use(LoggedInRedirector)
-		r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFileFS(w, r, templateFS, "login.html")
-		})
-
-		r.Post("/login", func(w http.ResponseWriter, r *http.Request) {
-			r.ParseForm()
-			name := r.PostForm.Get("name")
-			password := r.PostForm.Get("password")
-
-			if name == "" || password == "" {
-				params := url.Values{}
-				params.Add("err", "missing")
-				finalURL := "/login" + "?" + params.Encode()
-				http.Redirect(w, r, finalURL, 303)
-				return
-			}
-
-			id, err := db.VerifyUser(name, password)
-			if err != nil {
-				params := url.Values{}
-				params.Add("err", "invalid")
-				finalURL := "/login" + "?" + params.Encode()
-				http.Redirect(w, r, finalURL, 303)
-				return
-			}
-
-			token := MakeToken(id)
-
-			http.SetCookie(w, &http.Cookie{
-				HttpOnly: true,
-				Expires:  time.Now().Add(7 * 24 * time.Hour),
-				SameSite: http.SameSiteLaxMode,
-				// Uncomment below for HTTPS:
-				// Secure: true,
-				Name:  "jwt",
-				Value: token,
+		r.Route("/login", func(r chi.Router) {
+			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				http.ServeFileFS(w, r, templateFS, "login.html")
 			})
-
-			http.Redirect(w, r, "/", 303)
+			r.Post("/", Login)
 		})
+
+		r.Route("/forgot-password", func(r chi.Router) {
+			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				http.ServeFileFS(w, r, templateFS, "forgot-password.html")
+			})
+			r.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				ForgotPassword(w, r, ms)
+			})
+		})
+
+		r.Route("/reset-password", func(r chi.Router) {
+			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				http.ServeFileFS(w, r, templateFS, "reset-password.html")
+			})
+			r.Post("/", ResetPassword)
+
+		})
+
 	})
 
 	// Admin only pages
@@ -111,14 +97,12 @@ func Serve(contentFS fs.FS) http.Handler {
 			r.Use(SessionOnly)
 
 			r.Route("/challenges", func(r chi.Router) {
-				r.Route("/active", func(r chi.Router) {
-					r.Get("/", GetActiveChallenges)
-				})
+				r.Get("/active", GetActiveChallenges)
 				r.Get("/latest", GetLatestChallenge)
 				r.Get("/", GetChallenges)
 				r.Post("/", CreateChallenge)
 				r.Patch("/", UpdateChallenge)
-				r.Get("/{id}", GetChallenge)	
+				r.Get("/{id}", GetChallenge)
 				r.Delete("/{id}", DeleteChallenge)
 			})
 			r.Route("/performances", func(r chi.Router) {
@@ -127,7 +111,9 @@ func Serve(contentFS fs.FS) http.Handler {
 			r.Route("/users", func(r chi.Router) {
 				r.Get("/", GetUsers)
 				r.Patch("/", UpdateUser)
-				r.Post("/", CreateUser)
+				r.Post("/", func(w http.ResponseWriter, r *http.Request) {
+					CreateUser(w, r, ms)
+				})
 				r.Delete("/{id}", DeleteUser)
 			})
 			r.Route("/session", func(r chi.Router) {
@@ -189,6 +175,106 @@ func ValidSession(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(res)
+}
+
+func Login(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	name := r.PostForm.Get("name")
+	password := r.PostForm.Get("password")
+
+	if name == "" || password == "" {
+		params := url.Values{}
+		params.Add("err", "missing")
+		finalURL := "/login" + "?" + params.Encode()
+		http.Redirect(w, r, finalURL, 303)
+		return
+	}
+
+	id, err := db.VerifyUser(name, password)
+	if err != nil {
+		params := url.Values{}
+		params.Add("err", "invalid")
+		finalURL := "/login" + "?" + params.Encode()
+		http.Redirect(w, r, finalURL, 303)
+		return
+	}
+
+	token := MakeSessionToken(id)
+
+	http.SetCookie(w, &http.Cookie{
+		HttpOnly: true,
+		Expires:  time.Now().Add(7 * 24 * time.Hour),
+		SameSite: http.SameSiteLaxMode,
+		// Uncomment below for HTTPS:
+		// Secure: true,
+		Name:  "jwt",
+		Value: token,
+	})
+
+	http.Redirect(w, r, "/", 303)
+}
+
+func ForgotPassword(w http.ResponseWriter, r *http.Request, ms *services.MailService) {
+	r.ParseForm()
+	email := r.PostForm.Get("email")
+
+	_, err := mail.ParseAddress(email)
+	if err != nil {
+		params := url.Values{}
+		params.Add("err", "invalid")
+		finalURL := "/forgot-password" + "?" + params.Encode()
+		http.Redirect(w, r, finalURL, 303)
+		return
+	}
+
+	token := MakeResetToken(email)
+	err = db.StartResetPassword(email, token, ms)
+	if err != nil {
+		params := url.Values{}
+		params.Add("err", "failed")
+		finalURL := "/forgot-password" + "?" + params.Encode()
+		http.Redirect(w, r, finalURL, 303)
+		return
+	}
+
+	params := url.Values{}
+	params.Add("state", "success")
+	finalURL := "/forgot-password" + "?" + params.Encode()
+	http.Redirect(w, r, finalURL, 303)
+}
+
+func ResetPassword(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	password := r.PostForm.Get("password")
+	tokenStr := r.PostForm.Get("token")
+
+	if tokenStr == "" || password == "" {
+		params := url.Values{}
+		params.Add("token", tokenStr)
+		params.Add("err", "invalid")
+		finalURL := "/reset-password" + "?" + params.Encode()
+		http.Redirect(w, r, finalURL, 303)
+		return
+	}
+
+	token, err := tokenAuth.Decode(tokenStr)
+	if err != nil {
+		// TODO:
+		log.Println(err)
+		http.Redirect(w, r, "/", 303)
+		return
+	}
+	err = db.FinishResetPassword(token, password)
+	if err != nil {
+		params := url.Values{}
+		params.Add("token", tokenStr)
+		params.Add("err", "failed")
+		finalURL := "/reset-password" + "?" + params.Encode()
+		http.Redirect(w, r, finalURL, 303)
+		return
+	}
+
+	http.Redirect(w, r, "/login", 303)
 }
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
@@ -274,10 +360,8 @@ func GetChallenge(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(challenge)
 }
 
-func CreateUser(w http.ResponseWriter, r *http.Request) {
+func CreateUser(w http.ResponseWriter, r *http.Request, ms *services.MailService) {
 	var req db.User
-
-	// TODO: Email
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -292,7 +376,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.AddUser(&req)
+	err = db.AddUser(&req, ms)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -401,7 +485,6 @@ func GetLatestChallenge(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(challenge)
 }
-
 
 func CreatePerformance(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()

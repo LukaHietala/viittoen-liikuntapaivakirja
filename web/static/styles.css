@@ -55,11 +55,17 @@ a {
     background-color: #f5f5f5;
 }
 
+.active-nav-item {
+    color: var(--primary);
+    text-decoration: underline !important;
+}
+
 .list {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
+
 
 .item {
     background-color: white;

@@ -7,190 +7,199 @@
 				src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js">
 		</script>
         <link rel="stylesheet" href="static/styles.css" />
-	<body x-data="">
-        <main>
-            <div>
-                 <section x-show="$store.session.loggedIn">
-                    <nav class="navbar"> 
-                        <div>
-                            <a href="/" class="btn-link">Etusivu</a>
-                            <a href="/profile" class="btn-link">Profiili</a>
-                            <a href="/challenges" class="btn-link">Haasteet</a>
-                            <a href="/admin" x-show="$store.session.admin" class="btn-link">
-                                Ylläpitäjälle
-                            </a>
-                        </div>
-                        <div>
-                            <a href="/logout" class="btn-link">Kirjaudu ulos</a>
-                        </div>
-                    </nav>
-                </section>
-                <h2 x-show="$store.session.loggedIn">Aktiiviset haasteet</h2>
-                <section x-show="!$store.session.loggedIn" style="padding: 15px;">
-                    <p style="margin: 0;">
-                        Jos haluat nähdä tai lisätä suorituksia sinun täytyy
-                        <a href="/login">kirjautua</a>.
-                        Jos sinulla ei ole käyttäjää pyydä ylläpitäjää luomaan se.
-                    </p>
-                </section>
-                <div x-show="$store.state.challenges.length > 0" class="list">
-                    <template x-for="challenge in $store.state.challenges" >
-                        <div x-data="{ confirm: false }">
-                            <div x-show="!confirm" class="item">
-                                <div class="item-info">
-                                    <strong x-text="challenge.title"></strong>
-                                    <span x-text="`- Tavoite: ${challenge.pot}`"></span>
-                                    /
-                                    <span x-text="challenge.goal_points"></span>
-                                    <progress x-bind:max="challenge.goal_points"
-                                              x-bind:value="`${challenge.pot}`">
-                                        Edistys mittari
-                                    </progress>
-                                </div>
-                                <div x-show="$store.session.loggedIn" class="item-actions">
-                                    <button x-show="!confirm"
-                                            x-on:click="confirm = !confirm">
-                                        Lisää suoritus
-                                    </button>
-                                </div>
-                            </div>
-                            <section x-show="confirm">
-                                <div style="padding: 15px">
-                                    <span x-text="challenge.title" style="font-size:
-                                                                          small;">
-                                    </span>
-                                    <p>Yksi piste vastaa yhtä käveltyä kilometriä</p>
-                                </div>
-                                <input type="number"/> metriä
-                                <div style="padding: 15px; border-top: 1px solid var(--border);">
-                                    <button x-show="confirm"
-                                        x-on:click="confirm = false"
-                                        class="secondary-btn">
-                                        Peruuta
-                                    </button>
-                                    <button x-show="confirm"
-                                        x-on:click="addPerformance($event,
-                                        challenge.id); confirm =
-                                        false">
-                                        Vahvista
-                                    </button>
-                                </div>
-                            </section>
-                        </div>
-                    </template>
-                </div>
-                <template x-if="$store.state.challenges.length == 0">
-                    <div>
-                        <h2>Ei ole aktiivisia haasteita</h2>
-                    </div>
-                </template>
-                <section x-show="$store.session.loggedIn">
-                    <template x-if="$store.state.lastActive != null">
-                        <div x-data="{ leaderboard :
-                                     leaderboard($store.state.lastActive.performances)
-                                     }">
-                            <strong>
-                                Viime haasteen tilastot:
-                            </strong>
-                            <p x-text="$store.state.lastActive.title"></p>
-                            <progress x-bind:max="$store.state.lastActive.goal_points"
-                                      x-bind:value="$store.state.lastActive.pot">
-                                Edistys mittari
-                            </progress>						
-                            <p>
-                                Listat
-                            </p>
-                            <ul>
-                                <template x-for="student in leaderboard">
-                                    <li>
-                                        <p>
-                                            <span x-text="student[0]"></span>
-                                            :
-                                            
-                                            <span x-text="student[1]"></span>
-                                        </p>
-                                    </li>
-                                </template>
-                            </ul>
-                        </div>
-                    </template>
-                    <p x-show="$store.state.lastActive == null">
-                        Historiassa ei haaste `SQL INSERT kikkeli`
-                    </p>
-                </section>
-            </div>
-        </main>
-	</body>
-	<script>
-		document.addEventListener('alpine:init', async () => {
-			Alpine.store('session', {
-				loggedIn: false
-			});
-			
-			Alpine.store('state', {
-				challenges: [],
-				lastActive: null,
-				
-			});
-
-			window.leaderboard = performances => {
-				m = new Map();
-				performances.map((x) => {
-					v = m.get(x.user.name) || 0;
-					m.set(x.user.name, v + x.points);
-				});
-				return m;
-			}
-			
-			async function getChallenges() { 
-				try {
-					const response = await fetch("/api/challenges/active");
-					if (!response.ok) {
-						throw new Error("Jotain meni pieleen: " + response.status);
-					}
-					return await response.json()
-				} catch (e) {
-    				console.error(e.message);
-                }
-			}
-			
-			async function getLast() { 
-				try {
-					const response = await fetch("/api/challenges/latest");
-					if (!response.ok) {
-						throw new Error("Jotain meni pieleen: " + response.status);
-					}
-					return await response.json()
-				} catch (e) {
-    				console.error(e.message);
-                }
-			}
-
-			Alpine.store('state', {
-				challenges: await getChallenges(),
-				lastActive: await getLast()
-			});
-
-			window.addPerformance = async (event, challenge_id) => {
-				const response = await fetch(`/api/performances`, {
-					method: "POST",
-					body: JSON.stringify({
-						points: 1,
-						challenge_id: challenge_id
-					}) 
-				});
-				Alpine.store('state').challenges = await getChallenges();
-			};
-
-			const loggedIn = async (event) => {
-				const res = await fetch("/api/session");
-				const json = await res.json();
+		<body x-data="">
+			<main>
+				<div class="container">
+					<section x-show="$store.session.loggedIn">
+						<nav class="navbar"> 
+							<div>
+								<a href="/" class="btn-link active-nav-item">Etusivu</a>
+								<a href="/profile" class="btn-link">Profiili</a>
+								<a href="/challenges" class="btn-link">Haasteet</a>
+								<a href="/admin" x-show="$store.session.admin" class="btn-link" x-cloak>
+									Ylläpitäjälle
+								</a>
+							</div>
+							<div>
+								<a href="/logout" class="btn-link">Kirjaudu ulos</a>
+							</div>
+						</nav>
+					</section>
+					<h2 x-show="$store.session.loggedIn">Aktiiviset haasteet</h2>
+					<section x-show="!$store.session.loggedIn" style="padding: 15px;">
+						<p style="margin: 0;">
+							Jos haluat nähdä tai lisätä suorituksia sinun täytyy
+							<a href="/login">kirjautua</a>.
+							Jos sinulla ei ole käyttäjää pyydä ylläpitäjää luomaan se.
+						</p>
+					</section>
+					<div x-show="$store.state.challenges.length > 0" class="list">
+						<template x-for="challenge in $store.state.challenges" >
+							<div x-data="{ confirm: false }">
+								<div x-show="!confirm" class="item">
+									<div class="item-info">
+										<strong x-text="challenge.title"></strong>
+										<span x-text="`- Tavoite: ${challenge.pot}`"></span>
+										/
+										<span x-text="challenge.goal_points"></span>
+										<progress x-bind:max="challenge.goal_points"
+												  x-bind:value="`${challenge.pot}`">
+											Edistys mittari
+										</progress>
+									</div>
+									<div x-show="$store.session.loggedIn"
+										 class="item-actions">
+										<button x-show="!confirm"
+												x-on:click="confirm = !confirm;
+															$store.state.addPoints=0">
+											Lisää suoritus
+										</button>
+									</div>
+								</div>
+								<section x-show="confirm">
+									<div style="padding: 15px">
+										<span x-text="challenge.title"
+											  style="font-size: small;">
+										</span>
+										<p>
+											Yksi piste vastaa yhtä käveltyä
+											kilometriä
+										</p>
+									</div>
+									<input x-model.number="$store.state.addPoints"
+										   type="number"/>
+									<span x-text="challenge.unit"></span>
+									<div style="padding: 15px;
+												border-top: 1px solid var(--border);">
+										<button x-show="confirm"
+												x-on:click="confirm = false"
+												class="secondary-btn">
+											Peruuta
+										</button>
+										<button x-show="confirm"
+												x-on:click="addPerformance($event,
+															challenge.id); confirm =
+															false">
+											Vahvista
+										</button>
+									</div>
+								</section>
+							</div>
+						</template>
+					</div>
+					<template x-if="$store.state.challenges.length == 0">
+						<div>
+							<h2>Ei ole aktiivisia haasteita</h2>
+						</div>
+					</template>
+					<section x-show="$store.session.loggedIn">
+						<template x-if="$store.state.lastActive != null">
+							<div x-data="{ leaderboard :
+										 leaderboard($store.state.lastActive.performances)
+										 }">
+								<strong>
+									Viime haasteen tilastot:
+								</strong>
+								<p x-text="$store.state.lastActive.title"></p>
+								<progress x-bind:max="$store.state.lastActive.goal_points"
+										  x-bind:value="$store.state.lastActive.pot">
+									Edistys mittari
+								</progress>						
+								<p>
+									Listat
+								</p>
+								<ul>
+									<template x-for="student in leaderboard">
+										<li>
+											<p>
+												<span x-text="student[0]"></span>
+												:
+												
+												<span x-text="student[1]"></span>
+											</p>
+										</li>
+									</template>
+								</ul>
+							</div>
+						</template>
+						<p x-show="$store.state.lastActive == null">
+							Historiassa ei haaste `SQL INSERT kikkeli`
+						</p>
+					</section>
+				</div>
+			</main>
+		</body>
+		<script>
+			document.addEventListener('alpine:init', async () => {
 				Alpine.store('session', {
-					loggedIn: await json.ok,
-					admin: await json.admin
+					loggedIn: false
 				});
-			};
-			await loggedIn();
-		});
-	</script>
+				
+				Alpine.store('state', {
+					challenges: [],
+					lastActive: null,
+					addPoints: 0,
+					
+				});
+
+				window.leaderboard = performances => {
+					m = new Map();
+					performances.map((x) => {
+						v = m.get(x.user.name) || 0;
+						m.set(x.user.name, v + x.points);
+					});
+					return m;
+				}
+				
+				async function getChallenges() { 
+					try {
+						const response = await fetch("/api/challenges/active");
+						if (!response.ok) {
+							throw new Error("Jotain meni pieleen: " + response.status);
+						}
+						return await response.json()
+					} catch (e) {
+    					console.error(e.message);
+					}
+				}
+				
+				async function getLast() { 
+					try {
+						const response = await fetch("/api/challenges/latest");
+						if (!response.ok) {
+							throw new Error("Jotain meni pieleen: " + response.status);
+						}
+						return await response.json()
+					} catch (e) {
+    					console.error(e.message);
+					}
+				}
+
+				Alpine.store('state', {
+					challenges: await getChallenges(),
+					lastActive: await getLast()
+				});
+
+				window.addPerformance = async (event, challenge_id) => {
+					const response = await fetch(`/api/performances`, {
+						method: "POST",
+						body: JSON.stringify({
+							points: Alpine.store('state').addPoints,
+							challenge_id: challenge_id
+						}) 
+					});
+					Alpine.store('state').challenges = await getChallenges();
+				};
+
+				const loggedIn = async (event) => {
+					const res = await fetch("/api/session");
+					const json = await res.json();
+					Alpine.store('session', {
+						loggedIn: await json.ok,
+						admin: await json.admin
+					});
+				};
+				await loggedIn();
+			});
+		</script>
 </html>

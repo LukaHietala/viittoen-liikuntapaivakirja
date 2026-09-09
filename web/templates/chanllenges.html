@@ -12,13 +12,13 @@
 	</head>
 	<body x-data="">
 		<main>
-			<div>
+			<div class="container">
                 <section>
                     <nav class="navbar"> 
                         <div>
                             <a href="/" class="btn-link">Etusivu</a>
                             <a href="/profile" class="btn-link">Profiili</a>
-                            <a href="/challenges" class="btn-link">Haasteet</a>
+                            <a href="/challenges" class="btn-link active-nav-item">Haasteet</a>
                             <a href="/admin" x-show="$store.session.admin" class="btn-link">
                                 Ylläpitäjälle
                             </a>
@@ -109,7 +109,6 @@
 						</button>
 					</div>
 				</section>
-			</div>
 			<div x-show="$store.state.challenges.length > 0" class="list">
 				<template x-for="challenge in $store.state.challenges">
 					<div x-data="{ showPerformances : false }">
@@ -272,6 +271,7 @@
 				</template>
 			</div>
 			<p x-show="$store.state.challenges.length == 0">Ei haasteita</p>
+            </div>
 		</main>
 	</body>
 	<script>

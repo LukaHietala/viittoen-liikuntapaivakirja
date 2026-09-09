@@ -12,19 +12,21 @@
 	</head>
 	<body>
 		<main x-data="">
-            <div>
-                 <section>
+            <div class="container">
+                <section>
                     <nav class="navbar"> 
                         <div>
-                        <a href="/" class="btn-link">Etusivu</a>
-                        <a href="/profile" class="btn-link">Profiili</a>
-                        <a href="/challenges" class="btn-link">Haasteet</a>
-                        <a href="/admin" x-show="$store.session.admin" class="btn-link">
-                            Ylläpitäjälle
-                        </a>
+							<a href="/" class="btn-link">Etusivu</a>
+							<a href="/profile" class="btn-link active-nav-item">
+								Profiili
+							</a>
+							<a href="/challenges" class="btn-link">Haasteet</a>
+							<a href="/admin" x-show="$store.session.admin" class="btn-link">
+								Ylläpitäjälle
+							</a>
                         </div>
                         <div>
-                        <a href="/logout" class="btn-link">Kirjaudu ulos</a>
+							<a href="/logout" class="btn-link">Kirjaudu ulos</a>
                         </div>
                     </nav>
                 </section>
@@ -40,53 +42,61 @@
                 <h3>Suorituksesi</h3>
                 <div class="list">
                     <template x-for="performance in $store.state.self.performances">
-                        <div class="item">
-                            <div class="item-info">
-                                <span>
-                                    Pisteet:
-                                    <strong x-text="performance.points">
-                                    </strong>
-                                </span>
-                                <span>
-                                    - Suoritettu
-                                    <strong x-text="performance.created_at">
-                                    </strong>
-                                </span>
+                        <div x-data="{ challenge: null }">
+                            <div class="item">
+                                <div class="item-info">
+                                    <span>
+                                        Pisteet:
+                                        <strong x-text="performance.points">
+                                        </strong>
+                                    </span>
+                                    <span>
+                                        - Suoritettu
+                                        <strong x-text="performance.created_at">
+                                        </strong>
+                                    </span>
+                                </div>
+                                <div class="item-actions">
+                                    <button x-show="challenge == null"
+                                            x-on:click="challenge = await getChallenge(
+                                                        $event,
+                                                        performance.challenge_id)">
+                                        <!-- okei luukas hakee haasteen, rontti -->
+                                        Näytä haaste
+                                    </button>
+                                    <button x-show="challenge != null"
+                                            x-on:click="challenge = null">
+                                        Näytä haaste
+                                    </button>
+                                </div>
                             </div>
-                            <div class="item-actions" x-data="{ challenge: null }">
-                                <template x-if="challenge != null">
-                                    <div>
-                                        <p x-text="challenge.title"></p>
-                                        <p x-text="`${challenge.pot}/
-                                                   ${challenge.goal_points}`">
-                                        </p>
+                            <template x-if="challenge != null">
+                                <section style="margin-top: 6px;">
+                                    <div style="padding: 15px;">
+                                        <strong x-text="challenge.title"></strong><br />
+                                        Ajanjakso:
+                                        <span x-text="challenge.start_date"></span>
+                                        -
+                                        <span x-text="challenge.end_date"></span>
                                     </div>
-                                </template>
-                                <button x-show="challenge == null"
-                                        x-on:click="challenge = await getChallenge(
-                                                    $event,
-                                                    performance.challenge_id)">
-                                    <!-- LUUKAS HAE HAASTE -->
-                                    <!-- okei luukas hakee haasteen, rontti -->
-                                    Näytä haaste
-                                </button>
-                                <button x-show="challenge != null"
-                                        x-on:click="challenge = null">
-                                    Näytä haaste
-                                </button>
-                            </div>
+                                </section>
+                            </template>
                         </div>
                     </template>
                 </div>
                 <section x-show="$store.state.self.performances == null ||
-                                 $store.state.self.performances.length == 0">
-                    <p>Ei haasteita.</p>
+                                 $store.state.self.performances.length == 0" style="padding: 15px;">
+                    <span>Ei haasteita.</span>
                 </section>
             </div>
 		</main>
 	</body>
 	<script type="text/javascript">
 		document.addEventListener("alpine:init", async () => {
+			Alpine.store('session', {
+				loggedIn: false
+			});
+			
 			Alpine.store("state", {
 				self: {
 					performances: [],
@@ -107,9 +117,9 @@
 			};
 			await getProfile();
 
-			async function getChallenge(e, challenge_id) {
+			window.getChallenge = async (e, challenge_id) => {
 				try {
-					const response = await fetch(`/api/challenge/${challenge_id}`);
+					const response = await fetch(`/api/challenges/${challenge_id}`);
 					if (!response.ok) {
 						throw new Error("Jotain meni pieleen: " + response.status);
 					}
@@ -118,6 +128,16 @@
 					console.error(e.message);
 				}
 			}
+			// Session
+			const loggedIn = async (event) => {
+				const res = await fetch("/api/session");
+				const json = await res.json();
+				Alpine.store('session', {
+					loggedIn: await json.ok,
+					admin: await json.admin
+				});
+			};
+			await loggedIn();
 		});
 	</script>
 </html>

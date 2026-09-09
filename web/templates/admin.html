@@ -20,7 +20,7 @@
                             <a href="/" class="btn-link">Etusivu</a>
                             <a href="/profile" class="btn-link">Profiili</a>
                             <a href="/challenges" class="btn-link">Haasteet</a>
-                            <a href="/admin" x-show="$store.session.admin" class="btn-link">
+                            <a href="/admin" x-show="$store.session.admin" class="btn-link active-nav-item">
                                 Ylläpitäjälle
                             </a>
                         </div>
@@ -38,7 +38,7 @@
 							<input type="text" name="name"
 								   x-model="$store.add.user.name" />
 							<br/>
-							<label for="email">Email:</label><br />
+							<label for="email">Sähköposti:</label><br />
 							<input type="email" name="email"
 								   x-model="$store.add.user.email" />
 						</div>
@@ -72,7 +72,7 @@
 					<div>
 						<!-- NOT EDITING -->
 						<div x-show="$store.state.editing_user_id != user.id">
-							<div class="inline-item">
+							<div class="item">
 								<div class="item-info">
 									<strong x-text="user.name"></strong>
 									<span class="badge" x-show="user.is_admin">Ylläpitäjä</span>

@@ -12,11 +12,25 @@
 	</head>
 	<body x-data="">
 		<main>
-			<div>
-				<div style="display: inline-flex; gap: 8px; align-items: center;">
-					<button class="secondary-btn icon-btn" onclick="history.back()"><img src="/static/chevron-back.svg" alt="Takaisin"/></button>
-					<h2>Käyttäjät</h2>
-				</div>
+			<div class="container">
+                <!-- Navbar -->
+                <section>
+                    <nav class="navbar"> 
+                        <div>
+                            <a href="/" class="btn-link">Etusivu</a>
+                            <a href="/profile" class="btn-link">Profiili</a>
+                            <a href="/challenges" class="btn-link">Haasteet</a>
+                            <a href="/admin" x-show="$store.session.admin" class="btn-link">
+                                Ylläpitäjälle
+                            </a>
+                        </div>
+                        <div>
+                            <a href="/logout" class="btn-link">Kirjaudu ulos</a>
+                        </div>
+                    </nav>
+                </section>
+                <h2>Käyttäjät</h2>
+                <!-- Add new user section -->
 				<section x-data="{ adding: false }">
 					<div x-show="adding">
 						<div style="padding: 15px">
@@ -32,7 +46,7 @@
 							<button
 								type="submit"
 								:disabled="$store.add.user.name.length == 0 ||
-										   $store.add.user.password.length == 0"
+										   $store.add.user.email.length == 0"
 								x-on:click="addUser($event);
 											adding = false">
 								Lisää käyttäjä
@@ -52,13 +66,13 @@
 						</button>
 					</div>
 				</section>
-			</div>
+            <!-- List of all users -->
 			<div x-show="$store.state.users.length > 0" class="list">
 				<template x-for="user in $store.state.users">
 					<div>
 						<!-- NOT EDITING -->
 						<div x-show="$store.state.editing_user_id != user.id">
-							<div class="item">
+							<div class="inline-item">
 								<div class="item-info">
 									<strong x-text="user.name"></strong>
 									<span class="badge" x-show="user.is_admin">Ylläpitäjä</span>
@@ -75,9 +89,9 @@
 							<section>
 								<div style="padding: 15px">
 									<label for="name">Nimi:</label><br />
-									<input x-model="user.name" type="text" /><br />
-									<label for="pass">Uusi salasana (valinnainen):</label><br />
-									<input x-model="user.password_plain" /><br />
+									<input type="text" x-model="user.name" type="text" /><br />
+									<label for="email">Sähköposti</label><br />
+									<input type="email" x-model="user.email" /><br />
 									<label>Onko ylläpitäjä:</label>
 									<input
 										x-model="user.is_admin"
@@ -89,10 +103,11 @@
 											var(--border)"
 									 x-data="{ confirm: false }">
 									<button 
-											x-show="!confirm"
-											:disabled="user.name.length == 0"
-											x-on:click="$store.state.editing_user_id = null;
-														updateUser($event, user.id)">
+										x-show="!confirm"
+										:disabled="user.name.length == 0 ||
+												   user.email.length == 0"
+										x-on:click="$store.state.editing_user_id = null;
+													updateUser($event, user.id)">
 										Tallenna
 									</button>
 									<button
@@ -125,7 +140,7 @@
 			</div>
 		</main>
 	</body>
-	<script>
+	<script>		
 		document.addEventListener("alpine:init", async () => {
 			Alpine.store("add", {
 				user: {
@@ -172,7 +187,7 @@
 				Alpine.store("add", {
 					user: {
 						name: "",
-						password: ""
+						email: ""
 					}
 				});
 			};

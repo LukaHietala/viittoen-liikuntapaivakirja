@@ -9,90 +9,116 @@
         <link rel="stylesheet" href="static/styles.css" />
 	<body x-data="">
         <main>
-			<h2 x-show="$store.session.loggedIn">Aktiiviset haasteet</h2>
-			<section x-show="!$store.session.loggedIn" style="padding: 15px;">
-				<p style="margin: 0;">
-					Jos haluat nähdä tai lisätä suorituksia sinun täytyy
-					<a href="/login">kirjautua</a>.
-					Jos sinulla ei ole käyttäjää pyydä ylläpitäjää luomaan se.
-				</p>
-			</section>
-            <section x-show="$store.session.loggedIn" style="padding: 15px;">
-				<p style="margin: 0;">
-					Katso aiemmat suorituksesi ja tilastosi
-					<a href="/profile">profiilistasi</a>.
-                </p>
-			</section>
-            <div x-show="$store.state.challenges.length > 0" class="list">
-                <template x-for="challenge in $store.state.challenges" >
-                    <div class="item">
-                        <div class="item-info">
-                            <strong x-text="challenge.title"></strong>
-                            <span x-text="`- Tavoite: ${challenge.pot}`"></span>
-                            /
-                            <span x-text="challenge.goal_points"></span>
-                            <progress x-bind:max="challenge.goal_points"
-                                      x-bind:value="`${challenge.pot}`">
-                                Edistys mittari
-                            </progress>
+            <div>
+                 <section x-show="$store.session.loggedIn">
+                    <nav class="navbar"> 
+                        <div>
+                            <a href="/" class="btn-link">Etusivu</a>
+                            <a href="/profile" class="btn-link">Profiili</a>
+                            <a href="/challenges" class="btn-link">Haasteet</a>
+                            <a href="/admin" x-show="$store.session.admin" class="btn-link">
+                                Ylläpitäjälle
+                            </a>
                         </div>
-                        <div x-show="$store.session.loggedIn"
-							 x-data="{ confirm: false }" class="item-actions">
-                            <button x-show="!confirm"
-									x-on:click="confirm = !confirm">
-								Lisää suoritus
-							</button>
-                            <button x-show="confirm"
-									x-on:click="confirm = false"
-									class="secondary-btn">
-                                Peruuta
-                            </button>
-                            <button x-show="confirm"
-                                    x-on:click="addPerformance($event,
-                                                challenge.id); confirm =
-                                                false">
-                                Vahvista
-                            </button>
+                        <div>
+                            <a href="/logout" class="btn-link">Kirjaudu ulos</a>
                         </div>
+                    </nav>
+                </section>
+                <h2 x-show="$store.session.loggedIn">Aktiiviset haasteet</h2>
+                <section x-show="!$store.session.loggedIn" style="padding: 15px;">
+                    <p style="margin: 0;">
+                        Jos haluat nähdä tai lisätä suorituksia sinun täytyy
+                        <a href="/login">kirjautua</a>.
+                        Jos sinulla ei ole käyttäjää pyydä ylläpitäjää luomaan se.
+                    </p>
+                </section>
+                <div x-show="$store.state.challenges.length > 0" class="list">
+                    <template x-for="challenge in $store.state.challenges" >
+                        <div x-data="{ confirm: false }">
+                            <div x-show="!confirm" class="item">
+                                <div class="item-info">
+                                    <strong x-text="challenge.title"></strong>
+                                    <span x-text="`- Tavoite: ${challenge.pot}`"></span>
+                                    /
+                                    <span x-text="challenge.goal_points"></span>
+                                    <progress x-bind:max="challenge.goal_points"
+                                              x-bind:value="`${challenge.pot}`">
+                                        Edistys mittari
+                                    </progress>
+                                </div>
+                                <div x-show="$store.session.loggedIn" class="item-actions">
+                                    <button x-show="!confirm"
+                                            x-on:click="confirm = !confirm">
+                                        Lisää suoritus
+                                    </button>
+                                </div>
+                            </div>
+                            <section x-show="confirm">
+                                <div style="padding: 15px">
+                                    <span x-text="challenge.title" style="font-size:
+                                                                          small;">
+                                    </span>
+                                    <p>Yksi piste vastaa yhtä käveltyä kilometriä</p>
+                                </div>
+                                <input type="number"/> metriä
+                                <div style="padding: 15px; border-top: 1px solid var(--border);">
+                                    <button x-show="confirm"
+                                        x-on:click="confirm = false"
+                                        class="secondary-btn">
+                                        Peruuta
+                                    </button>
+                                    <button x-show="confirm"
+                                        x-on:click="addPerformance($event,
+                                        challenge.id); confirm =
+                                        false">
+                                        Vahvista
+                                    </button>
+                                </div>
+                            </section>
+                        </div>
+                    </template>
+                </div>
+                <template x-if="$store.state.challenges.length == 0">
+                    <div>
+                        <h2>Ei ole aktiivisia haasteita</h2>
                     </div>
                 </template>
+                <section x-show="$store.session.loggedIn">
+                    <template x-if="$store.state.lastActive != null">
+                        <div x-data="{ leaderboard :
+                                     leaderboard($store.state.lastActive.performances)
+                                     }">
+                            <strong>
+                                Viime haasteen tilastot:
+                            </strong>
+                            <p x-text="$store.state.lastActive.title"></p>
+                            <progress x-bind:max="$store.state.lastActive.goal_points"
+                                      x-bind:value="$store.state.lastActive.pot">
+                                Edistys mittari
+                            </progress>						
+                            <p>
+                                Listat
+                            </p>
+                            <ul>
+                                <template x-for="student in leaderboard">
+                                    <li>
+                                        <p>
+                                            <span x-text="student[0]"></span>
+                                            :
+                                            
+                                            <span x-text="student[1]"></span>
+                                        </p>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </template>
+                    <p x-show="$store.state.lastActive == null">
+                        Historiassa ei haaste `SQL INSERT kikkeli`
+                    </p>
+                </section>
             </div>
-            <template x-if="$store.state.challenges.length == 0">
-                <div>
-                    <h2>Ei ole aktiivisia haasteita</h2>
-                </div>
-            </template>
-			<section>
-				<template x-if="$store.state.lastActive != null">
-					<div x-data="{ leaderboard :
-								 leaderboard($store.state.lastActive.performances)
-								 }">
-						<p>
-							Viime haasteen tilastot:
-						</p>
-						<p x-text="$store.state.lastActive.title"></p>
-						<p x-text="$store.state.lastActive.goal_points"></p>
-						<p>
-							Listat
-						</p>
-						<ul>
-							<template x-for="student in leaderboard">
-								<li>
-									<p>
-										<span x-text="student[0]"></span>
-										:
-										
-										<span x-text="student[1]"></span>
-									</p>
-								</li>
-							</template>
-						</ul>
-					</div>
-				</template>
-				<p x-show="$store.state.lastActive == null">
-					Historiassa ei haaste `SQL INSERT kikkeli`
-				</p>
-			</section>
         </main>
 	</body>
 	<script>
@@ -103,7 +129,8 @@
 			
 			Alpine.store('state', {
 				challenges: [],
-				lastActive: null
+				lastActive: null,
+				
 			});
 
 			window.leaderboard = performances => {

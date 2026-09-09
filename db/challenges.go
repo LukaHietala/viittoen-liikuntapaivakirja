@@ -13,7 +13,7 @@ func GetChallenge(ctx context.Context, id int) (*Challenge, error) {
 	c := new(Challenge)
 	err := DB.QueryRowContext(ctx,
 		"SELECT * FROM challenges WHERE id = ? LIMIT 1", id).
-		Scan(&c.ID, &c.Title, &c.GoalPoints, &c.StartDate, &c.EndDate)
+		Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints, &c.StartDate, &c.EndDate)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func GetAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
 	challenges := make([]*Challenge, 0)
 	for rows.Next() {
 		c := new(Challenge)
-		err := rows.Scan(&c.ID, &c.Title, &c.GoalPoints,
+		err := rows.Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints,
 			&c.StartDate, &c.EndDate)
 		if err != nil {
 			return nil, err
@@ -110,7 +110,7 @@ func GetLatestChallenge(ctx context.Context) (*Challenge, error) {
 	c := new(Challenge)
 	err := DB.QueryRowContext(ctx,
 		"SELECT * FROM challenges WHERE date() > end_date LIMIT 1").
-		Scan(&c.ID, &c.Title, &c.GoalPoints, &c.StartDate, &c.EndDate)
+		Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints, &c.StartDate, &c.EndDate)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -167,8 +167,8 @@ func AddChallenge(c *Challenge) error {
 		return fmt.Errorf("invalid dates")
 	}
 	_, err := DB.Exec(`
-		INSERT INTO challenges(title, goal_points, start_date, end_date)
-		VALUES(?, ?, ?, ?)`, c.Title, c.GoalPoints, c.StartDate, c.EndDate)
+		INSERT INTO challenges(title, description, unit, goal_points, start_date, end_date)
+		VALUES(?, ?, ?, ?, ?, ?)`, c.Title, c.Description, c.Unit, c.GoalPoints, c.StartDate, c.EndDate)
 
 	if err != nil {
 		return err
@@ -195,8 +195,8 @@ func UpdateChallenge(c *Challenge) error {
 	}
 	_, err := DB.Exec(`
 		UPDATE challenges
-		SET title = ?, goal_points = ?, start_date = ?, end_date = ?
-		WHERE id = ?`, c.Title, c.GoalPoints, c.StartDate, c.EndDate, c.ID)
+		SET title = ?, description = ?, unit = ?, goal_points = ?, start_date = ?, end_date = ?
+		WHERE id = ?`, c.Title, c.Description, c.Unit, c.GoalPoints, c.StartDate, c.EndDate, c.ID)
 
 	if err != nil {
 		return err

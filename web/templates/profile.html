@@ -12,61 +12,77 @@
 	</head>
 	<body>
 		<main x-data="">
-			<div style="display: inline-flex; gap: 8px; align-items: center">
-				<button class="secondary-btn icon-btn" onclick="history.back()">
-					<img src="/static/chevron-back.svg" alt="Takaisin" />
-				</button>
-				<h2>Haasteet</h2>
-			</div>
-			<section style="padding: 15px">
-				<span
-					x-text="`Keräämäsi pisteet:
-							${sumPerformances($store.state.self.performances)}`"
-					>
-				</span>
-			</section>
-			<!-- LUUKAS ÄLÄ NÄYTÄ JOS EI HAASTEITA -->
-			<h3>Suorituksesi</h3>
-			<div class="list">
-				<template x-for="performance in $store.state.self.performances">
-					<div class="item">
-						<div class="item-info">
-							<span>
-								Pisteet:
-								<strong x-text="performance.points">
-								</strong>
-							</span>
-							<span>
-								- Suoritettu
-								<strong x-text="performance.created_at">
-								</strong>
-							</span>
-						</div>
-						<div class="item-actions" x-data="{ challenge: null }">
-							<template x-if="challenge != null">
-								<div>
-									<p x-text="challenge.title"></p>
-									<p x-text="`${challenge.pot}/
-											   ${challenge.goal_points}`">
-									</p>
-								</div>
-							</template>
-							<button x-show="challenge == null"
-									x-on:click="challenge = await getChallenge(
-												$event,
-												performance.challenge_id)">
-								<!-- LUUKAS HAE HAASTE -->
-								<!-- okei luukas hakee haasteen, rontti -->
-								Näytä haaste
-							</button>
-							<button x-show="challenge != null"
-									x-on:click="challenge = null">
-								Näytä haaste
-							</button>
-						</div>
-					</div>
-				</template>
-			</div>
+            <div>
+                 <section>
+                    <nav class="navbar"> 
+                        <div>
+                        <a href="/" class="btn-link">Etusivu</a>
+                        <a href="/profile" class="btn-link">Profiili</a>
+                        <a href="/challenges" class="btn-link">Haasteet</a>
+                        <a href="/admin" x-show="$store.session.admin" class="btn-link">
+                            Ylläpitäjälle
+                        </a>
+                        </div>
+                        <div>
+                        <a href="/logout" class="btn-link">Kirjaudu ulos</a>
+                        </div>
+                    </nav>
+                </section>
+                <h2>Profiili</h2>
+                <section style="padding: 15px">
+                    <span
+                        x-text="`Keräämäsi pisteet:
+                                ${sumPerformances($store.state.self.performances)}`"
+                        >
+                    </span>
+                </section>
+                <!-- LUUKAS ÄLÄ NÄYTÄ JOS EI HAASTEITA -->
+                <h3>Suorituksesi</h3>
+                <div class="list">
+                    <template x-for="performance in $store.state.self.performances">
+                        <div class="item">
+                            <div class="item-info">
+                                <span>
+                                    Pisteet:
+                                    <strong x-text="performance.points">
+                                    </strong>
+                                </span>
+                                <span>
+                                    - Suoritettu
+                                    <strong x-text="performance.created_at">
+                                    </strong>
+                                </span>
+                            </div>
+                            <div class="item-actions" x-data="{ challenge: null }">
+                                <template x-if="challenge != null">
+                                    <div>
+                                        <p x-text="challenge.title"></p>
+                                        <p x-text="`${challenge.pot}/
+                                                   ${challenge.goal_points}`">
+                                        </p>
+                                    </div>
+                                </template>
+                                <button x-show="challenge == null"
+                                        x-on:click="challenge = await getChallenge(
+                                                    $event,
+                                                    performance.challenge_id)">
+                                    <!-- LUUKAS HAE HAASTE -->
+                                    <!-- okei luukas hakee haasteen, rontti -->
+                                    Näytä haaste
+                                </button>
+                                <button x-show="challenge != null"
+                                        x-on:click="challenge = null">
+                                    Näytä haaste
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <section x-show="$store.state.self.performances == null ||
+                                 $store.state.self.performances.length == 0">
+                    <p>Ei haasteita.</p>
+                </section>
+            </div>
 		</main>
 	</body>
 	<script type="text/javascript">
@@ -77,8 +93,11 @@
 				},
 			});
 
-			window.sumPerformances = (performances) =>
-			performances.reduce((sum, x) => sum + x.points, 0);
+			window.sumPerformances = (performances) => (
+				(performances == null ) ?
+					0
+					: performances.reduce((sum, x) => sum + x.points, 0)
+			);
 
 			const getProfile = async (event) => {
 				const res = await fetch("/api/self");

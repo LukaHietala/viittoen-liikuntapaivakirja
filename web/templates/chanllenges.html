@@ -8,18 +8,27 @@
 			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js">
 		</script>
 		<link rel="stylesheet" href="static/styles.css" />
-		<title>Muokkaa haasteet</title>
+		<title>Muokkaa haasteita</title>
 	</head>
 	<body x-data="">
 		<main>
 			<div>
-                <div style="display: inline-flex; gap: 8px; align-items: center;">
-                    <button class="secondary-btn icon-btn"
-							onclick="history.back()">
-						<img src="/static/chevron-back.svg" alt="Takaisin"/>
-					</button>
-                    <h2>Haasteet</h2>
-                </div>
+                <section>
+                    <nav class="navbar"> 
+                        <div>
+                            <a href="/" class="btn-link">Etusivu</a>
+                            <a href="/profile" class="btn-link">Profiili</a>
+                            <a href="/challenges" class="btn-link">Haasteet</a>
+                            <a href="/admin" x-show="$store.session.admin" class="btn-link">
+                                Ylläpitäjälle
+                            </a>
+                        </div>
+                        <div>
+                            <a href="/logout" class="btn-link">Kirjaudu ulos</a>
+                        </div>
+                    </nav>
+                </section>
+                <h2>Haasteet</h2>
 				<section x-data="{ adding: false }">
 					<div x-show="adding">
 						<div style="padding: 15px">
@@ -29,13 +38,26 @@
 								name="title"
 								x-model="$store.add.challenge.title"/>
 							<br/>
+							<label for="description">Kuvaus:</label><br />
+							<input
+								type="text"
+								name="description"
+								x-model="$store.add.challenge.description"/>
+							<br/>
 							<label for="points">Tavoite pisteet:</label><br />
 							<input
 								type="number"
 								name="points"
-								x-model.number="$store.add.challenge.points"/><br />
-							<label for="start_date">Aloitus</label>
+                                min="0"
+								x-model.number="$store.add.challenge.points"/>
 							<br/>
+							<label for="unit">Yksikkö:</label><br />
+							<input
+								type="text"
+								name="unit"
+								x-model="$store.add.challenge.unit"/>
+							<br/>
+                            <label for="start_date">Aloitus</label><br />
 							<input
 								type="date"
 								name="start_date"
@@ -53,11 +75,17 @@
 						<div style="padding: 15px; border-top: 1px solid var(--border)">
 							<button
 								type="submit"
-								:disabled="$store.add.challenge.title.length == 0 ||
+								:disabled="$store.add.challenge.title.length ==
+										   0 ||
+										   $store.add.challenge.description == null ||
+										   $store.add.challenge.description.length == 0 ||
 										   parseInt($store.add.challenge.points) ==
 										   NaN ||
 										   $store.add.challenge.points == null ||
-										   $store.add.challenge.points.length == 0 ||
+										   $store.add.challenge.points.length ==
+										   0 ||
+										   $store.add.challenge.unit == null ||
+										   $store.add.challenge.unit.length == 0 ||
 										   $store.add.challenge.start_date == null ||
 										   $store.add.challenge.end_date == null ||
 										   Date.parse($store.add.challenge.start_date)
@@ -171,15 +199,26 @@
 									<input
 										type="text"
 										name="title"
-										x-model="challenge.title"
-										/><br />
+										x-model="challenge.title"/>
+									<br/>
+									<label for="description">Kuvaus:</label><br />
+									<input
+										type="text"
+										name="description"
+										x-model="challenge.description"/>
+									<br/>
 									<label for="goal">Tavoite pisteet:</label><br />
 									<input
 										type="number"
 										name="goal"
-										x-model.number="challenge.goal_points"
-										/>
-									<br />
+										x-model.number="challenge.goal_points"/>
+									<br/>
+									<label for="unit">Yksikkö:</label><br />
+									<input
+										type="text"
+										name="unit"
+										x-model.number="challenge.unit"/>
+									<br/>
 									<span>Ajanjakso:</span><br />
 									<input x-model="challenge.start_date" type="date" />
 									-
@@ -189,18 +228,24 @@
 											var(--border)"
 									 x-data="{ confirm: false }">
 									<button 
-										:disabled="challenge.title.length == 0 ||
-												   parseInt(challenge.points) ==
+										:disabled="challenge.title.length == 0
+												   ||
+												   challenge.description == null ||
+												   challenge.description.length == 0 ||
+												   parseInt(challenge.goal_points) ==
 												   NaN ||
-												   challenge.points == null ||
-												   challenge.points.length == 0 ||
+												   challenge.goal_points == null ||
+												   challenge.goal_points.length
+												   == 0 ||
+												   challenge.unit == null ||
+												   challenge.unit.length == 0 ||
 												   challenge.start_date == null ||
 												   challenge.end_date == null ||
 												   Date.parse(challenge.start_date)
 												   > Date.parse(challenge.end_date)"
-											x-show="!confirm"
-											x-on:click="$store.state.editing_id = null;
-														updateChallenge($event, challenge.id)">
+										x-show="!confirm"
+										x-on:click="$store.state.editing_id = null;
+													updateChallenge($event, challenge.id)">
 										Tallenna
 									</button>
 									<button
@@ -231,10 +276,16 @@
 	</body>
 	<script>
 		document.addEventListener("alpine:init", async () => {
+			Alpine.store('session', {
+				loggedIn: false
+			});
+			
 			Alpine.store("add", {
 				challenge: {
 					title: "",
+					description: "",
 					points: 0,
+					unit: "",
 					start_date: null,
 					end_date: null,
 				}
@@ -282,24 +333,21 @@
 
 			// Add
 			window.clearAdd = (event) => {
-				Alpine.store("add", {
+				Alpine.store('add', {
 					challenge: {
 						title: "",
+						description: "",
 						points: 0,
+						unit: "",
 						start_date: null,
-						end_date: null,
+						end_date: null
 					}
 				});
 			};
 			window.addChallenge = async (event) => {
 				const response = await fetch("/api/challenges", {
 					method: "POST",
-					body: JSON.stringify({
-						title: Alpine.store("add").challenge.title,
-						goal_points: parseInt(Alpine.store("add").challenge.points),
-						start_date: Alpine.store("add").challenge.start_date,
-						end_date: Alpine.store("add").challenge.end_date,
-					}),
+					body: JSON.stringify(Alpine.store("add").challenge)
 				});
 				clearAdd();
 				Alpine.store("state").challenges = await getChallenges();
@@ -320,6 +368,16 @@
 					body: JSON.stringify(challenge),
 				});
 			};
+			// Session
+			const loggedIn = async (event) => {
+				const res = await fetch("/api/session");
+				const json = await res.json();
+				Alpine.store('session', {
+					loggedIn: await json.ok,
+					admin: await json.admin
+				});
+			};
+			await loggedIn();
 		});
 	</script>
 </html>

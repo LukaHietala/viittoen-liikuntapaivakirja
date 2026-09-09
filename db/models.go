@@ -3,6 +3,8 @@ package db
 type Challenge struct {
 	ID           int            `json:"id"`
 	Title        string         `json:"title"`
+	Description  string         `json:"description"`
+	Unit         string         `json:"unit"`
 	GoalPoints   int            `json:"goal_points"`
 	StartDate    string         `json:"start_date"`
 	EndDate      string         `json:"end_date"`
@@ -13,7 +15,7 @@ type Challenge struct {
 type User struct {
 	ID            int            `json:"id"`
 	Name          string         `json:"name"`
-	Email 		  string 		 `json:"email"`
+	Email         string         `json:"email"`
 	PasswordHash  string         `json:"password_hash,omitempty"`
 	PasswordPlain string         `json:"password_plain,omitempty"`
 	IsAdmin       bool           `json:"is_admin,omitempty"`

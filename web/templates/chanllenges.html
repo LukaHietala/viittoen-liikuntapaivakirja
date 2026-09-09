@@ -55,6 +55,7 @@
 							<input
 								type="text"
 								name="unit"
+								placeholder="Esim. kilometrejä, tunteja"
 								x-model="$store.add.challenge.unit"/>
 							<br/>
                             <label for="start_date">Aloitus</label><br />
@@ -109,168 +110,191 @@
 						</button>
 					</div>
 				</section>
-			<div x-show="$store.state.challenges.length > 0" class="list">
-				<template x-for="challenge in $store.state.challenges">
-					<div x-data="{ showPerformances : false }">
-						<!-- NOT EDITING -->
-						<div
-							x-show="$store.state.editing_id !=
-									challenge.id"
-							:class="isActive(challenge.start_date,
-									challenge.end_date)
-									? 'item active' :
-									'item'">
-							<div class="item-info">
-								<strong x-text="challenge.title"></strong>
-								<span x-text="`- Tavoite: ${challenge.pot} /`"></span>
-								<span x-text="challenge.goal_points"></span>
-								-
-								<strong>Tila: </strong>
-								<span
-									x-show="isActive(challenge.start_date,
-											challenge.end_date)">
-									Aktiivinen
-								</span>
-								<span
-									x-show="!isActive(challenge.start_date,
-											challenge.end_date)">
-									Ei aktiivinen
-								</span>
-								<br />
-								<strong>Ajanjakso: </strong>
-								<span
-									x-text="` ${suomiDate(challenge.start_date)}
-											- ${suomiDate(challenge.end_date)}`">
-								</span>
-							</div>
-                            <div class="item-actions" style="display: inline-flex; gap: 6px;">
-								<button x-on:click="showPerformances = !showPerformances">
-									Suoritukset
-								</button>
-								<button x-on:click="$store.state.editing_id =
-													challenge.id;
-													showPerformances = false"
-										class="secondary-btn icon-btn">
-                                    <img src="/static/pen.svg" alt="Muokkaa" />
-								</button>
-							</div>
-						</div>
-                        <!-- PERFORMANCES -->
-                        <template x-if="showPerformances">
-                            <section
-                                style="margin-top: 6px;"
-                                x-data="{
-										map: performanceTree(challenge.performances)
-										}">
-                                <template x-for="value in map">
-                                    <!-- alpine boilerplate -->
-                                    <div>
-                                        <div style="padding: 15px; border-bottom: 1px solid var(--border)">
-                                            <strong x-text="`${value[1][0].user.name}`"></strong>
-                                        </div>
-                                        <div>
-                                            <template x-for="performance in value[1]">
-                                                <div style="padding: 10px 15px; border-bottom: 1px solid var(--border);">
-                                                    <span x-text="`${performance.created_at}`">
-                                                    </span>
-                                                    <span x-text="`Pisteitä:
-																  ${performance.points}`">
-                                                    </span>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </template>
-                                <div style="padding: 10px 15px;" x-show="challenge.performances == null ||
-																		 challenge.performances.length ==
-																		 0">
-                                    <span>
-                                        Ei suorituksia
-                                    </span>
-                                </div>
-                            </section>
-                        </template>
-						<!-- EDITING -->
-						<template x-if="$store.state.editing_id == challenge.id">
-							<section>
-								<div style="padding: 15px">
-									<label for="title">Haasteen nimi:</label><br />
-									<input
-										type="text"
-										name="title"
-										x-model="challenge.title"/>
-									<br/>
-									<label for="description">Kuvaus:</label><br />
-									<input
-										type="text"
-										name="description"
-										x-model="challenge.description"/>
-									<br/>
-									<label for="goal">Tavoite pisteet:</label><br />
-									<input
-										type="number"
-										name="goal"
-										x-model.number="challenge.goal_points"/>
-									<br/>
-									<label for="unit">Yksikkö:</label><br />
-									<input
-										type="text"
-										name="unit"
-										x-model.number="challenge.unit"/>
-									<br/>
-									<span>Ajanjakso:</span><br />
-									<input x-model="challenge.start_date" type="date" />
+				<div x-show="$store.state.challenges.length > 0" class="list">
+					<template x-for="challenge in $store.state.challenges">
+						<div x-data="{ showPerformances : false }">
+							<!-- NOT EDITING -->
+							<div
+								x-show="$store.state.editing_id !=
+										challenge.id"
+								:class="isActive(challenge.start_date,
+										challenge.end_date)
+										? 'item active' :
+										'item'">
+								<div class="item-info">
+									<strong x-text="challenge.title"></strong>
+									<span x-text="`- Tavoite: ${challenge.pot} /`"></span>
+									<span x-text="challenge.goal_points"></span>
 									-
-									<input x-model="challenge.end_date" type="date" />
+									<strong>Tila: </strong>
+									<span
+										x-show="isActive(challenge.start_date,
+												challenge.end_date)">
+										Aktiivinen
+									</span>
+									<span
+										x-show="!isActive(challenge.start_date,
+												challenge.end_date)">
+										Ei aktiivinen
+									</span>
+									<br />
+									<strong>Ajanjakso: </strong>
+									<span
+										x-text="` ${suomiDate(challenge.start_date)}
+												- ${suomiDate(challenge.end_date)}`">
+									</span>
 								</div>
-								<div style="padding: 15px; border-top: 1px solid
-											var(--border)"
-									 x-data="{ confirm: false }">
-									<button 
-										:disabled="challenge.title.length == 0
-												   ||
-												   challenge.description == null ||
-												   challenge.description.length == 0 ||
-												   parseInt(challenge.goal_points) ==
-												   NaN ||
-												   challenge.goal_points == null ||
-												   challenge.goal_points.length
-												   == 0 ||
-												   challenge.unit == null ||
-												   challenge.unit.length == 0 ||
-												   challenge.start_date == null ||
-												   challenge.end_date == null ||
-												   Date.parse(challenge.start_date)
-												   > Date.parse(challenge.end_date)"
-										x-show="!confirm"
-										x-on:click="$store.state.editing_id = null;
-													updateChallenge($event, challenge.id)">
-										Tallenna
+								<div class="item-actions">
+									<button x-on:click="showPerformances = !showPerformances">
+										Suoritukset
 									</button>
-									<button
-										x-show="!confirm"
-										x-on:click="confirm = true">
-										Poista
-									</button>
-									<button
-										x-show="confirm"
-										x-on:click="deleteChallenge($event, challenge.id);
-													confirm = false">
-										Varmista
-									</button>
-									<button
-										x-show="confirm"
-										x-on:click="confirm = false"
-										class="secondary-btn">
-										Peruuta
+									<button x-on:click="$store.state.editing_id =
+														challenge.id;
+														showPerformances = false"
+											class="secondary-btn icon-btn">
+										<img src="/static/pen.svg" alt="Muokkaa" />
 									</button>
 								</div>
-							</section>
-						</template>
-					</div>
-				</template>
-			</div>
-			<p x-show="$store.state.challenges.length == 0">Ei haasteita</p>
+							</div>
+							<!-- PERFORMANCES -->
+							<template x-if="showPerformances">
+								<section
+									style="margin-top: 6px;"
+									x-data="{
+											map:
+											performanceTree(challenge.performances),
+											reload() {
+											this.map = performanceTree(challenge.performances)
+											}
+											}">
+									<template x-for="value in map">
+										<!-- alpine boilerplate -->
+										<div>
+											<div style="padding: 15px; border-bottom: 1px solid var(--border)">
+												<strong x-text="`${value[1][0].user.name}`"></strong>
+											</div>
+											<div>
+												<template x-for="performance in value[1]">
+													<div style="padding: 10px 15px;
+																border-bottom: 1px
+																solid var(--border);
+																display: flex; justify-content: space-between; align-items: center;">
+														<div>
+															<span x-text="`${performance.created_at}`">
+															</span>
+															<span x-text="`Pisteitä:
+																		  ${performance.points}`">
+															</span>
+														</div>
+														<button class="secondary-btn
+																	   icon-btn"
+																x-show="$store.session.admin
+																		||
+																		performance.user_id
+																		==
+																		$store.session.id
+																		"
+																x-on:click="await deletePerformance(
+																			$event,
+																			performance.id);
+																			reload()">
+															<img src="/static/can.svg" alt="Poista" />
+														</button>
+													</div>
+												</template>
+											</div>
+										</div>
+									</template>
+									<div style="padding: 10px 15px;" x-show="challenge.performances == null ||
+																			 challenge.performances.length ==
+																			 0">
+										<span>
+											Ei suorituksia
+										</span>
+									</div>
+								</section>
+							</template>
+							<!-- EDITING -->
+							<template x-if="$store.state.editing_id == challenge.id">
+								<section>
+									<div style="padding: 15px">
+										<label for="title">Haasteen nimi:</label><br />
+										<input
+											type="text"
+											name="title"
+											x-model="challenge.title"/>
+										<br/>
+										<label for="description">Kuvaus:</label><br />
+										<input
+											type="text"
+											name="description"
+											x-model="challenge.description"/>
+										<br/>
+										<label for="goal">Tavoite pisteet:</label><br />
+										<input
+											type="number"
+											name="goal"
+											x-model.number="challenge.goal_points"/>
+										<br/>
+										<label for="unit">Yksikkö:</label><br />
+										<input
+											type="text"
+											name="unit"
+											x-model.number="challenge.unit"/>
+										<br/>
+										<span>Ajanjakso:</span><br />
+										<input x-model="challenge.start_date" type="date" />
+										-
+										<input x-model="challenge.end_date" type="date" />
+									</div>
+									<div style="padding: 15px; border-top: 1px solid
+												var(--border)"
+										 x-data="{ confirm: false }">
+										<button 
+											:disabled="challenge.title.length == 0
+													   ||
+													   challenge.description == null ||
+													   challenge.description.length == 0 ||
+													   parseInt(challenge.goal_points) ==
+													   NaN ||
+													   challenge.goal_points == null ||
+													   challenge.goal_points.length
+													   == 0 ||
+													   challenge.unit == null ||
+													   challenge.unit.length == 0 ||
+													   challenge.start_date == null ||
+													   challenge.end_date == null ||
+													   Date.parse(challenge.start_date)
+													   > Date.parse(challenge.end_date)"
+											x-show="!confirm"
+											x-on:click="$store.state.editing_id = null;
+														updateChallenge($event, challenge.id)">
+											Tallenna
+										</button>
+										<button
+											x-show="!confirm"
+											x-on:click="confirm = true">
+											Poista
+										</button>
+										<button
+											x-show="confirm"
+											x-on:click="deleteChallenge($event, challenge.id);
+														confirm = false">
+											Varmista
+										</button>
+										<button
+											x-show="confirm"
+											x-on:click="confirm = false"
+											class="secondary-btn">
+											Peruuta
+										</button>
+									</div>
+								</section>
+							</template>
+						</div>
+					</template>
+				</div>
+				<p x-show="$store.state.challenges.length == 0">Ei haasteita</p>
             </div>
 		</main>
 	</body>
@@ -368,13 +392,30 @@
 					body: JSON.stringify(challenge),
 				});
 			};
+			// Performances
+			window.deletePerformance = async (e, performance_id) => {
+				try {
+					const response = await fetch(`/api/performances/${performance_id}`, {
+						method: "DELETE",
+					});
+					if (!response.ok) {
+						throw new Error("Jotain meni pieleen: " + response.status);
+					}
+				} catch (e) {
+					console.error(e.message);
+				}
+				Alpine.store("state", {
+					challenges: await getChallenges()
+				});
+			}
 			// Session
 			const loggedIn = async (event) => {
 				const res = await fetch("/api/session");
 				const json = await res.json();
 				Alpine.store('session', {
 					loggedIn: await json.ok,
-					admin: await json.admin
+					admin: await json.admin,
+					id: await json.id,
 				});
 			};
 			await loggedIn();

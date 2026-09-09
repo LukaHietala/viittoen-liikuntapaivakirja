@@ -35,7 +35,10 @@
 					</section>
 					<div x-show="$store.state.challenges.length > 0" class="list">
 						<template x-for="challenge in $store.state.challenges" >
-							<div x-data="{ confirm: false }">
+							<div x-data="{
+										 confirm: false,
+										 addPoints: 0
+										 }">
 								<div x-show="!confirm" class="item">
 									<div class="item-info">
 										<strong x-text="challenge.title"></strong>
@@ -51,7 +54,7 @@
 										 class="item-actions">
 										<button x-show="!confirm"
 												x-on:click="confirm = !confirm;
-															$store.state.addPoints=0">
+															addPoints = 0">
 											Lisää suoritus
 										</button>
 									</div>
@@ -61,12 +64,11 @@
 										<span x-text="challenge.title"
 											  style="font-size: small;">
 										</span>
-										<p>
-											Yksi piste vastaa yhtä käveltyä
-											kilometriä
+										<p x-text="challenge.description">
 										</p>
 									</div>
-									<input x-model.number="$store.state.addPoints"
+									<input x-model.number="addPoints"
+										   min="1"
 										   type="number"/>
 									<span x-text="challenge.unit"></span>
 									<div style="padding: 15px;
@@ -77,9 +79,12 @@
 											Peruuta
 										</button>
 										<button x-show="confirm"
+												:disabled="parseInt(addPoints)
+														   == NaN"
 												x-on:click="addPerformance($event,
-															challenge.id); confirm =
-															false">
+															addPoints,
+															challenge.id);
+															confirm = false">
 											Vahvista
 										</button>
 									</div>
@@ -123,7 +128,7 @@
 							</div>
 						</template>
 						<p x-show="$store.state.lastActive == null">
-							Historiassa ei haaste `SQL INSERT kikkeli`
+							Ei ole edellisiä haasteita.
 						</p>
 					</section>
 				</div>
@@ -138,7 +143,6 @@
 				Alpine.store('state', {
 					challenges: [],
 					lastActive: null,
-					addPoints: 0,
 					
 				});
 
@@ -180,11 +184,11 @@
 					lastActive: await getLast()
 				});
 
-				window.addPerformance = async (event, challenge_id) => {
+				window.addPerformance = async (event, points, challenge_id) => {
 					const response = await fetch(`/api/performances`, {
 						method: "POST",
 						body: JSON.stringify({
-							points: Alpine.store('state').addPoints,
+							points: points,
 							challenge_id: challenge_id
 						}) 
 					});

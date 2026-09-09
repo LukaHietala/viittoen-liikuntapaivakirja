@@ -107,8 +107,10 @@ func Serve(contentFS fs.FS, ms *services.MailService) http.Handler {
 			})
 			r.Route("/performances", func(r chi.Router) {
 				r.Post("/", CreatePerformance)
+				r.Delete("/{id}", DeletePerformance)
 			})
 			r.Route("/users", func(r chi.Router) {
+				r.Use(AdminOnly)
 				r.Get("/", GetUsers)
 				r.Patch("/", UpdateUser)
 				r.Post("/", func(w http.ResponseWriter, r *http.Request) {
@@ -505,3 +507,21 @@ func CreatePerformance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func DeletePerformance(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+
+	err = db.DeletePerformance(ctx, id)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+}
+

@@ -159,7 +159,7 @@ func GetSelf(ctx context.Context) (*User, error) {
 	}
 
 	u := new(User)
-	err := DB.QueryRow("SELECT id, name, email, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.Email, &u.Name, &u.IsAdmin)
+	err := DB.QueryRow("SELECT id, name, email, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin)
 	if err != nil {
 		return nil, err
 	}

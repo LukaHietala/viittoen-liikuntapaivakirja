@@ -44,14 +44,15 @@ func Connect() (*sql.DB, error) {
 			FOREIGN KEY(challenge_id) REFERENCES challenges(id)
 		);
 
-		INSERT INTO users VALUES(NULL, "Jaakko", "jaakko@cat-v.org", "$2a$14$dhSvJi8wLpc0iAB5LW91Le4GKK/w9i7IKyZ6tgE7L8xnW4b2S2/lG", TRUE);
-		INSERT INTO users VALUES(NULL, "Tero", "tero@cat-v.org", "$2a$14$dhSvJi8wLpc0iAB5LW91Le4GKK/w9i7IKyZ6tgE7L8xnW4b2S2/lG", TRUE);
-		INSERT INTO users VALUES(NULL, "Luka", "luka.hietala08@gmail.com", "$2a$14$dhSvJi8wLpc0iAB5LW91Le4GKK/w9i7IKyZ6tgE7L8xnW4b2S2/lG", TRUE);
-		INSERT INTO challenges VALUES(NULL, "Syö paljon leipää", "Mustan kissan paksut posket", "km", 3, "2026-09-01", "2026-09-10");
-		INSERT INTO challenges VALUES(NULL, "Käy suihkussa", "AGGFDS sdGS sDFG", "kertaa", 1, "2026-08-01", "2026-09-25");
-		INSERT INTO challenges VALUES(NULL, "Sammuta Lukan koti", "sa das fasdf", "metriä", 15, "2026-06-01", "2026-07-25");
+		INSERT INTO users VALUES(NULL, "Jaakko", "jaakko@cat-v.org", "$2a$12$EA6dIz7gLEN4Ziiy60meleFgxxRscjAkfVLkqCuCFnhfnFX/AMike", FALSE);
+		INSERT INTO users VALUES(NULL, "Tero", "tero@cat-v.org", "$2a$12$EA6dIz7gLEN4Ziiy60meleFgxxRscjAkfVLkqCuCFnhfnFX/AMike", FALSE);
+		INSERT INTO users VALUES(NULL, "admin", "admin@admin.com", "$2a$12$oNY0On.kHD0PFA4yg/HwaOxyAKjcrDacFaf3dKtxLzH3XULDPVCtu", TRUE);
+		INSERT INTO challenges VALUES(NULL, "Käy salilla", "Kerätään sali tunteja.", "tunteja", 10, "2026-08-01", "2026-09-25");
+		INSERT INTO challenges VALUES(NULL, "Lenkkihaaste", "Joka päivä kävele 1 km", "km", 25, "2026-06-01", "2026-07-25");
 		INSERT INTO performances(points, user_id, challenge_id) VALUES (2, 1, 1);
-		INSERT INTO performances(points, user_id, challenge_id) VALUES (5, 2, 3);
+		INSERT INTO performances(points, user_id, challenge_id) VALUES (1, 1, 1);
+		INSERT INTO performances(points, user_id, challenge_id) VALUES (1, 2, 1);
+		INSERT INTO performances(points, user_id, challenge_id) VALUES (4, 2, 2);
 	`)
 	if err != nil {
 		return nil, err

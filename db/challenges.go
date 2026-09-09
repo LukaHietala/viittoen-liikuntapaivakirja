@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
 func GetChallenge(ctx context.Context, id int) (*Challenge, error) {
@@ -214,6 +215,44 @@ func AddPerformance(ctx context.Context, p *Performance) error {
 
 	_, err := DB.Exec(`INSERT INTO performances(points, user_id, challenge_id)
 					VALUES (?,?,?)`, p.Points, int(userIDFloat), p.ChallengeID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func DeletePerformance(ctx context.Context, id int) error {
+	token, claims, _ := jwtauth.FromContext(ctx)
+
+	if token == nil || jwt.Validate(token) != nil {
+		return fmt.Errorf("unable to validate user token")
+	}
+	userIDFloat, ok := claims["user_id"].(float64)
+	if !ok {
+		return fmt.Errorf("unable to convert user_id to float")
+	}
+
+	u := new(User)
+	err := DB.QueryRow("SELECT id, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.IsAdmin)
+	if err != nil {
+		return err
+	}
+
+	p := new(Performance)
+	err = DB.QueryRow("SELECT id, user_id FROM performances WHERE id = ? LIMIT 1", id).Scan(&p.ID, &p.UserID)
+	if err != nil {
+		return err
+	}
+
+	if int(userIDFloat) != p.UserID && !u.IsAdmin {
+		return fmt.Errorf("no permisson to delete performance")
+	}
+
+	_, err = DB.Exec(`
+		DELETE FROM performances
+		WHERE id = ?`, id)
+
 	if err != nil {
 		return err
 	}

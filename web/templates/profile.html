@@ -61,12 +61,17 @@
                                             x-on:click="challenge = await getChallenge(
                                                         $event,
                                                         performance.challenge_id)">
-                                        <!-- okei luukas hakee haasteen, rontti -->
                                         Näytä haaste
                                     </button>
                                     <button x-show="challenge != null"
                                             x-on:click="challenge = null">
                                         Näytä haaste
+                                    </button>
+                                    <button x-on:click="await deletePerformance(
+                                        $event,
+                                        performance.id)"
+                                        class="secondary-btn icon-btn">
+                                        <img src="/static/can.svg" alt="Poista" />
                                     </button>
                                 </div>
                             </div>
@@ -116,7 +121,7 @@
 				});
 			};
 			await getProfile();
-
+			// Challenges
 			window.getChallenge = async (e, challenge_id) => {
 				try {
 					const response = await fetch(`/api/challenges/${challenge_id}`);
@@ -127,6 +132,20 @@
 				} catch (e) {
 					console.error(e.message);
 				}
+			}
+			// Performances
+			window.deletePerformance = async (e, performance_id) => {
+				try {
+					const response = await fetch(`/api/performances/${performance_id}`, {
+						method: "DELETE",
+					});
+					if (!response.ok) {
+						throw new Error("Jotain meni pieleen: " + response.status);
+					}
+				} catch (e) {
+					console.error(e.message);
+				}
+				await getProfile();
 			}
 			// Session
 			const loggedIn = async (event) => {

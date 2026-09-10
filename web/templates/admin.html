@@ -5,8 +5,8 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<script
 			defer
-			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
-			></script>
+			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js">
+		</script>
 		<link rel="stylesheet" href="static/styles.css" />
 		<title>Ohjauspaneeli</title>
 	</head>
@@ -20,7 +20,8 @@
                             <a href="/" class="btn-link">Etusivu</a>
                             <a href="/profile" class="btn-link">Profiili</a>
                             <a href="/challenges" class="btn-link">Haasteet</a>
-                            <a href="/admin" x-show="$store.session.admin" class="btn-link active-nav-item">
+                            <a href="/admin" x-show="$store.session.admin"
+							   class="btn-link active-nav-item">
                                 Ylläpitäjälle
                             </a>
                         </div>
@@ -29,8 +30,8 @@
                         </div>
                     </nav>
                 </section>
+				<!-- Add new user section -->
                 <h2>Käyttäjät</h2>
-                <!-- Add new user section -->
 				<section x-data="{ adding: false }">
 					<div x-show="adding">
 						<div style="padding: 15px">
@@ -96,8 +97,7 @@
 									<input
 										x-model="user.is_admin"
 										type="checkbox"
-										:disabled="$store.session.id == user.id"
-										/>
+										:disabled="$store.session.id == user.id"/>
 								</div>
 								<div style="padding: 15px; border-top: 1px solid
 											var(--border)"
@@ -128,8 +128,7 @@
 									<button
 										x-show="confirm"
 										x-on:click="confirm = false"
-										class="secondary-btn"
-										>
+										class="secondary-btn">
 										Peruuta
 									</button>
 								</div>
@@ -140,7 +139,7 @@
 			</div>
 		</main>
 	</body>
-	<script>		
+	<script>
 		document.addEventListener("alpine:init", async () => {
 			Alpine.store("add", {
 				user: {
@@ -196,7 +195,7 @@
 					method: "POST",
 					body: JSON.stringify({
 						name: Alpine.store("add").user.name,
-						password_plain: Alpine.store("add").user.email,
+						email: Alpine.store("add").user.email,
 					}),
 				});
 				clearAdd();

@@ -11,6 +11,8 @@
     box-sizing: border-box;
 }
 
+[x-cloak] { display: none !important; }
+
 body {
     font-family: Arial, sans-serif;
     margin: 0;

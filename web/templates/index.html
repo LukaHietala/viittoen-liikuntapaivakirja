@@ -7,6 +7,7 @@
 				src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js">
 		</script>
         <link rel="stylesheet" href="static/styles.css" />
+		<title>Cock Cock Cock</title>
 		<body x-data="">
 			<main>
 				<div class="container">
@@ -39,7 +40,7 @@
 										 confirm: false,
 										 addPoints: 0
 										 }">
-								<div x-show="!confirm" class="item">
+								<div x-show="!confirm" class="item active">
 									<div class="item-info">
 										<strong x-text="challenge.title"></strong>
 										<span x-text="`- Tavoite: ${challenge.pot}`"></span>
@@ -60,17 +61,18 @@
 									</div>
 								</div>
 								<section x-show="confirm">
+                            	    <div style="padding: 15px;
+												border-bottom: 1px solid var(--border);">
+                                        <strong x-text="challenge.title"></strong><br />
+                                        <span x-text="challenge.description"></span>
+                                    </div>
+
 									<div style="padding: 15px">
-										<span x-text="challenge.title"
-											  style="font-size: small;">
-										</span>
-										<p x-text="challenge.description">
-										</p>
+                                        <input x-model.number="addPoints"
+                                        min="1"
+                                        type="number"/>
+                                        <span x-text="challenge.unit"></span>
 									</div>
-									<input x-model.number="addPoints"
-										   min="1"
-										   type="number"/>
-									<span x-text="challenge.unit"></span>
 									<div style="padding: 15px;
 												border-top: 1px solid var(--border);">
 										<button x-show="confirm"
@@ -92,45 +94,11 @@
 							</div>
 						</template>
 					</div>
-					<template x-if="$store.state.challenges.length == 0">
-						<div>
-							<h2>Ei ole aktiivisia haasteita</h2>
-						</div>
+					<template x-cloak x-if="$store.state.challenges.length == 0">
+						<section style="padding: 15px;">
+							<span>Ei ole aktiivisia haasteita</span>
+						</section>
 					</template>
-					<section x-show="$store.session.loggedIn">
-						<template x-if="$store.state.lastActive != null">
-							<div x-data="{ leaderboard :
-										 leaderboard($store.state.lastActive.performances)
-										 }">
-								<strong>
-									Viime haasteen tilastot:
-								</strong>
-								<p x-text="$store.state.lastActive.title"></p>
-								<progress x-bind:max="$store.state.lastActive.goal_points"
-										  x-bind:value="$store.state.lastActive.pot">
-									Edistys mittari
-								</progress>						
-								<p>
-									Listat
-								</p>
-								<ul>
-									<template x-for="student in leaderboard">
-										<li>
-											<p>
-												<span x-text="student[0]"></span>
-												:
-												
-												<span x-text="student[1]"></span>
-											</p>
-										</li>
-									</template>
-								</ul>
-							</div>
-						</template>
-						<p x-show="$store.state.lastActive == null">
-							Ei ole edellisiä haasteita.
-						</p>
-					</section>
 				</div>
 			</main>
 		</body>

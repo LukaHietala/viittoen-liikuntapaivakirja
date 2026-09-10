@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"net/mail"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +17,24 @@ import (
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
+
+type ErrResponse struct {
+	Message string `json:"message"`
+}
+
+type LoginRequest struct {
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}
+
+type ForgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+type ResetPasswordRequest struct {
+	NewPassword string `json:"new_password"`
+	Token       string `json:"token"`
+}
 
 func Serve(contentFS fs.FS, ms *services.MailService) http.Handler {
 	r := chi.NewRouter()
@@ -74,9 +91,7 @@ func Serve(contentFS fs.FS, ms *services.MailService) http.Handler {
 				http.ServeFileFS(w, r, templateFS, "reset-password.html")
 			})
 			r.Post("/", ResetPassword)
-
 		})
-
 	})
 
 	// Admin only pages
@@ -100,11 +115,16 @@ func Serve(contentFS fs.FS, ms *services.MailService) http.Handler {
 				r.Get("/active", GetActiveChallenges)
 				r.Get("/latest", GetLatestChallenge)
 				r.Get("/", GetChallenges)
+				r.Get("/{id}", GetChallenge)
 				r.Post("/", CreateChallenge)
 				r.Patch("/", UpdateChallenge)
-				r.Get("/{id}", GetChallenge)
-				r.Delete("/{id}", DeleteChallenge)
+				r.Route("/", func(r chi.Router) {
+					r.Use(AdminOnly)
+					r.Delete("/{id}", DeleteChallenge)
+				})
 			})
+
+
 			r.Route("/performances", func(r chi.Router) {
 				r.Post("/", CreatePerformance)
 				r.Delete("/{id}", DeletePerformance)
@@ -180,24 +200,33 @@ func ValidSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	name := r.PostForm.Get("name")
-	password := r.PostForm.Get("password")
+	var req LoginRequest
 
-	if name == "" || password == "" {
-		params := url.Values{}
-		params.Add("err", "missing")
-		finalURL := "/login" + "?" + params.Encode()
-		http.Redirect(w, r, finalURL, 303)
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		w.WriteHeader(400)
 		return
 	}
 
-	id, err := db.VerifyUser(name, password)
+	if req.Name == "" || req.Password == "" {
+		res := ErrResponse{
+			Message: "Nimi ja salasana ovat pakollisia",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(401)
+		json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	id, err := db.VerifyUser(req.Name, req.Password)
 	if err != nil {
-		params := url.Values{}
-		params.Add("err", "invalid")
-		finalURL := "/login" + "?" + params.Encode()
-		http.Redirect(w, r, finalURL, 303)
+		res := ErrResponse{
+			Message: "Nimi tai salasana on väärin",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(401)
+		json.NewEncoder(w).Encode(res)
 		return
 	}
 
@@ -213,70 +242,87 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Value: token,
 	})
 
-	http.Redirect(w, r, "/", 303)
+	w.WriteHeader(200)
 }
 
 func ForgotPassword(w http.ResponseWriter, r *http.Request, ms *services.MailService) {
-	r.ParseForm()
-	email := r.PostForm.Get("email")
+	var req ForgotPasswordRequest
 
-	_, err := mail.ParseAddress(email)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		params := url.Values{}
-		params.Add("err", "invalid")
-		finalURL := "/forgot-password" + "?" + params.Encode()
-		http.Redirect(w, r, finalURL, 303)
+		w.WriteHeader(400)
 		return
 	}
 
-	token := MakeResetToken(email)
-	err = db.StartResetPassword(email, token, ms)
+	_, err = mail.ParseAddress(req.Email)
 	if err != nil {
-		params := url.Values{}
-		params.Add("err", "failed")
-		finalURL := "/forgot-password" + "?" + params.Encode()
-		http.Redirect(w, r, finalURL, 303)
+		res := ErrResponse{
+			Message: "Email ei ole oikeassa muodossa",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(400)
+		json.NewEncoder(w).Encode(res)
 		return
 	}
 
-	params := url.Values{}
-	params.Add("state", "success")
-	finalURL := "/forgot-password" + "?" + params.Encode()
-	http.Redirect(w, r, finalURL, 303)
+	token := MakeResetToken(req.Email)
+	err = db.StartResetPassword(req.Email, token, ms)
+	if err != nil {
+		res := ErrResponse{
+			Message: "Käyttäjää ei löytynyt",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(404)
+		json.NewEncoder(w).Encode(res)
+		return
+	}
+	w.WriteHeader(200)
 }
 
 func ResetPassword(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	password := r.PostForm.Get("password")
-	tokenStr := r.PostForm.Get("token")
+	var req ResetPasswordRequest
 
-	if tokenStr == "" || password == "" {
-		params := url.Values{}
-		params.Add("token", tokenStr)
-		params.Add("err", "invalid")
-		finalURL := "/reset-password" + "?" + params.Encode()
-		http.Redirect(w, r, finalURL, 303)
-		return
-	}
-
-	token, err := tokenAuth.Decode(tokenStr)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		// TODO:
-		log.Println(err)
-		http.Redirect(w, r, "/", 303)
-		return
-	}
-	err = db.FinishResetPassword(token, password)
-	if err != nil {
-		params := url.Values{}
-		params.Add("token", tokenStr)
-		params.Add("err", "failed")
-		finalURL := "/reset-password" + "?" + params.Encode()
-		http.Redirect(w, r, finalURL, 303)
+		w.WriteHeader(400)
 		return
 	}
 
-	http.Redirect(w, r, "/login", 303)
+	if req.Token == "" || req.NewPassword == "" {
+		res := ErrResponse{
+			Message: "Uusi salasana on pakollinen",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(400)
+		json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	token, err := tokenAuth.Decode(req.Token)
+	if err != nil {
+		res := ErrResponse{
+			Message: "Virheellinen tai vanhentunut nollaus linkki",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(400)
+		json.NewEncoder(w).Encode(res)
+		return
+	}
+	err = db.FinishResetPassword(token, req.NewPassword)
+	if err != nil {
+		res := ErrResponse{
+			Message: "Jotain meni pieleen",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(500)
+		json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	w.WriteHeader(200)
 }
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
@@ -373,7 +419,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request, ms *services.MailService
 	}
 	defer r.Body.Close()
 
-	if req.Name == "" || req.PasswordPlain == "" {
+	if req.Name == "" || req.Email == "" {
 		http.Error(w, http.StatusText(400), 400)
 		return
 	}
@@ -524,4 +570,3 @@ func DeletePerformance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-

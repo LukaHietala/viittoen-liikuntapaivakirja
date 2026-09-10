@@ -16,6 +16,9 @@ func GetChallenge(ctx context.Context, id int) (*Challenge, error) {
 		"SELECT * FROM challenges WHERE id = ? LIMIT 1", id).
 		Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints, &c.StartDate, &c.EndDate)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return c, nil

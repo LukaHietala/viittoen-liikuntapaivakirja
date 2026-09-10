@@ -5,35 +5,53 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<title>Kirjaudu</title>
 		<link rel="stylesheet" href="static/styles.css" />
+		<script
+			defer
+			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js">
+		</script>
 	</head>
 	<body>
         <main>
             <h2>Kirjaudu</h2>
-            <section>
-                <form method="POST" action="/login">
-                    <div style="padding: 15px;">
-                        <label>Nimi:</label><br>
-                        <input type="text" name="name" value="" required/><br>
-                        <label>Salasana:</label><br>
-                        <input type="password" name="password" value="" required/><br>
-                    </div>
-					<div style="padding: 15px; border-top: 1px solid var(--border)">
-                        <button type="submit">Kirjaudu</button>
-                        <a href="/forgot-password">Unohditko salasanasi?</a>
-                    </div>
-                </form>
+            <section x-data="">
+                <div style="padding: 15px;">
+                    <label>Nimi:</label><br>
+                    <input type="text" name="name"
+						   x-model="$store.state.name"/><br>
+                    <label>Salasana:</label><br>
+                    <input type="password" name="password" 
+						   x-model="$store.state.password"/><br>
+                </div>
+				<div style="padding: 15px; border-top: 1px solid var(--border)">
+                    <button x-on:click="login">Kirjaudu</button>
+                    <a href="/forgot-password">Unohditko salasanasi?</a>
+                </div>
             </section>
         </main>
 	</body>
 	<script type="text/javascript">
-		const errors = new Map([
-			["missing", "Nimi tai salasana puuttuu"],
-			["invalid", "Salasana tai nimi oli väärin"],
-		]);
-		const params = new URLSearchParams(document.location.search);
-		const errorCode = params.get("err");
-		if (errorCode) {
-			alert(errors.get(errorCode));
-		}
+		document.addEventListener("alpine:init", async () => {
+			Alpine.store('state', {
+				name: "",
+				password: ""
+			});
+
+			window.login = async (event) => {
+				try {
+					const response = await fetch("/login", {
+						method: "POST",
+                        body: JSON.stringify({ name: Alpine.store("state").name, password: Alpine.store("state").password }),
+					});
+					if (!response.ok) {
+						const json = await response.json();
+						alert(json.message);
+					} else {
+						window.location.replace("/");
+					}
+				} catch (e) {
+					console.error(e.message);
+				}
+			};
+		});
 	</script>
 </html>

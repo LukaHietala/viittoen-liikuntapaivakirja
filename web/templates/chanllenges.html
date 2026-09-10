@@ -49,7 +49,7 @@
 								type="number"
 								name="points"
                                 min="0"
-								x-model.number="$store.add.challenge.points"/>
+								x-model.number="$store.add.challenge.goal_points"/>
 							<br/>
 							<label for="unit">Yksikkö:</label><br />
 							<input
@@ -82,8 +82,8 @@
 										   $store.add.challenge.description.length == 0 ||
 										   parseInt($store.add.challenge.points) ==
 										   NaN ||
-										   $store.add.challenge.points == null ||
-										   $store.add.challenge.points.length ==
+										   $store.add.challenge.goal_points == null ||
+										   $store.add.challenge.goal_points.length ==
 										   0 ||
 										   $store.add.challenge.unit == null ||
 										   $store.add.challenge.unit.length == 0 ||
@@ -218,19 +218,19 @@
 							<template x-if="$store.state.editing_id == challenge.id">
 								<section>
 									<div style="padding: 15px">
-										<label for="title">Haasteen nimi:</label><br />
+										<label for="title">Haasteen nimi:</label><br/>
 										<input
 											type="text"
 											name="title"
 											x-model="challenge.title"/>
 										<br/>
-										<label for="description">Kuvaus:</label><br />
+										<label for="description">Kuvaus:</label><br/>
 										<input
 											type="text"
 											name="description"
 											x-model="challenge.description"/>
 										<br/>
-										<label for="goal">Tavoite pisteet:</label><br />
+										<label for="goal">Tavoite pisteet:</label><br/>
 										<input
 											type="number"
 											name="goal"
@@ -272,7 +272,7 @@
 											Tallenna
 										</button>
 										<button
-											x-show="!confirm"
+											x-show="(!confirm) && $store.session.admin"
 											x-on:click="confirm = true">
 											Poista
 										</button>
@@ -294,21 +294,24 @@
 						</div>
 					</template>
 				</div>
-				<p x-show="$store.state.challenges.length == 0">Ei haasteita</p>
+                <section style="padding: 15px;" x-show="$store.state.challenges.length == 0">
+                    <span>Ei haasteita</span>
+                </section>
             </div>
 		</main>
 	</body>
 	<script>
 		document.addEventListener("alpine:init", async () => {
 			Alpine.store('session', {
-				loggedIn: false
+				loggedIn: false,
+				admin: false
 			});
 			
 			Alpine.store("add", {
 				challenge: {
 					title: "",
 					description: "",
-					points: 0,
+					goal_points: 0,
 					unit: "",
 					start_date: null,
 					end_date: null,
@@ -361,7 +364,7 @@
 					challenge: {
 						title: "",
 						description: "",
-						points: 0,
+						goal_points: 0,
 						unit: "",
 						start_date: null,
 						end_date: null

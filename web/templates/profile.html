@@ -5,8 +5,8 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<script
 			defer
-			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
-			></script>
+			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js">
+		</script>
 		<title>Profiili</title>
 		<link rel="stylesheet" href="static/styles.css" />
 	</head>
@@ -30,7 +30,7 @@
                         </div>
                     </nav>
                 </section>
-                <h2>Profiili</h2>
+                <h2 x-text="`Profiili (${$store.session.name})`"></h2>
                 <section style="padding: 15px">
                     <span
                         x-text="`Keräämäsi pisteet:
@@ -42,7 +42,10 @@
                 <h3>Suorituksesi</h3>
                 <div class="list">
                     <template x-for="performance in $store.state.self.performances">
-                        <div x-data="{ challenge: null }">
+                        <div x-data="{
+									 challenge: null,
+									 open: false
+									 }">
                             <div class="item">
                                 <div class="item-info">
                                     <span>
@@ -57,14 +60,15 @@
                                     </span>
                                 </div>
                                 <div class="item-actions">
-                                    <button x-show="challenge == null"
+                                    <button x-show="!open"
                                             x-on:click="challenge = await getChallenge(
                                                         $event,
-                                                        performance.challenge_id)">
+                                                        performance.challenge_id);
+														open = true">
                                         Näytä haaste
                                     </button>
-                                    <button x-show="challenge != null"
-                                            x-on:click="challenge = null">
+                                    <button x-show="open"
+                                            x-on:click="open = false">
                                         Näytä haaste
                                     </button>
                                     <button x-on:click="await deletePerformance(
@@ -75,7 +79,7 @@
                                     </button>
                                 </div>
                             </div>
-                            <template x-if="challenge != null">
+                            <template x-if="open && challenge != null">
                                 <section style="margin-top: 6px;">
                                     <div style="padding: 15px;">
                                         <strong x-text="challenge.title"></strong><br />
@@ -83,6 +87,14 @@
                                         <span x-text="challenge.start_date"></span>
                                         -
                                         <span x-text="challenge.end_date"></span>
+										</button>
+                                    </div>
+                                </section>
+                            </template>
+                            <template x-if="open && challenge == null">
+                                <section style="margin-top: 6px;">
+                                    <div style="padding: 15px;">
+                                        <span>Haastetta ei löytynyt, se on todennäköisesti poistettu</span>
                                     </div>
                                 </section>
                             </template>
@@ -99,7 +111,8 @@
 	<script type="text/javascript">
 		document.addEventListener("alpine:init", async () => {
 			Alpine.store('session', {
-				loggedIn: false
+				loggedIn: false,
+				name: "Jorma"
 			});
 			
 			Alpine.store("state", {
@@ -153,7 +166,8 @@
 				const json = await res.json();
 				Alpine.store('session', {
 					loggedIn: await json.ok,
-					admin: await json.admin
+					admin: await json.admin,
+					name: await json.name
 				});
 			};
 			await loggedIn();

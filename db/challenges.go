@@ -14,7 +14,7 @@ func GetChallenge(ctx context.Context, id int) (*Challenge, error) {
 	c := new(Challenge)
 	err := DB.QueryRowContext(ctx,
 		"SELECT * FROM challenges WHERE id = ? LIMIT 1", id).
-		Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints, &c.StartDate, &c.EndDate)
+		Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints, &c.StartDate, &c.EndDate, &c.UserID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -35,7 +35,7 @@ func GetAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
 	for rows.Next() {
 		c := new(Challenge)
 		err := rows.Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints,
-			&c.StartDate, &c.EndDate)
+			&c.StartDate, &c.EndDate, &c.UserID)
 		if err != nil {
 			return nil, err
 		}
@@ -110,69 +110,18 @@ func GetAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
 	return challenges, nil
 }
 
-func GetLatestChallenge(ctx context.Context) (*Challenge, error) {
-	c := new(Challenge)
-	err := DB.QueryRowContext(ctx,
-		"SELECT * FROM challenges WHERE date() > end_date LIMIT 1").
-		Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints, &c.StartDate, &c.EndDate)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
+func AddChallenge(ctx context.Context, c *Challenge) error {
+	_, claims, _ := jwtauth.FromContext(ctx)
+	userIDFloat, ok := claims["user_id"].(float64)
+	if !ok {
+		return fmt.Errorf("invalid user id in session")
 	}
-
-	var pRows *sql.Rows
-	pRows, err = DB.QueryContext(ctx, `
-			SELECT * FROM performances
-			WHERE challenge_id = ?`, c.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	var pot int
-
-	for pRows.Next() {
-		p := new(Performance)
-		err = pRows.Scan(&p.ID, &p.Points, &p.UserID,
-			&p.ChallengeID, &p.CreatedAt)
-		if err != nil {
-			pRows.Close()
-			return nil, err
-		}
-		pot += p.Points
-
-		c.Performances = append(c.Performances, p)
-	}
-
-	if err := pRows.Err(); err != nil {
-		pRows.Close()
-		return nil, err
-	}
-
-	for _, p := range c.Performances {
-		u := new(User)
-		err := DB.QueryRowContext(ctx, `
-				SELECT id, name FROM users WHERE id = ?
-			`, p.UserID).Scan(&u.ID, &u.Name)
-		if err == nil {
-			p.User = u
-		}
-	}
-
-	pRows.Close()
-	c.Pot = pot
-
-	return c, nil
-}
-
-func AddChallenge(c *Challenge) error {
 	if !IsValidDate(c.StartDate) || !IsValidDate(c.EndDate) {
 		return fmt.Errorf("invalid dates")
 	}
 	_, err := DB.Exec(`
-		INSERT INTO challenges(title, description, unit, goal_points, start_date, end_date)
-		VALUES(?, ?, ?, ?, ?, ?)`, c.Title, c.Description, c.Unit, c.GoalPoints, c.StartDate, c.EndDate)
+		INSERT INTO challenges(title, description, unit, goal_points, start_date, end_date, user_id)
+		VALUES(?, ?, ?, ?, ?, ?, ?)`, c.Title, c.Description, c.Unit, c.GoalPoints, c.StartDate, c.EndDate, int(userIDFloat))
 
 	if err != nil {
 		return err
@@ -181,8 +130,34 @@ func AddChallenge(c *Challenge) error {
 	return nil
 }
 
-func DeleteChallenge(id int) error {
-	_, err := DB.Exec(`
+func DeleteChallenge(ctx context.Context, id int) error {
+	token, claims, _ := jwtauth.FromContext(ctx)
+
+	if token == nil || jwt.Validate(token) != nil {
+		return fmt.Errorf("unable to validate user token")
+	}
+	userIDFloat, ok := claims["user_id"].(float64)
+	if !ok {
+		return fmt.Errorf("unable to convert user_id to float")
+	}
+
+	u := new(User)
+	err := DB.QueryRow("SELECT id, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.IsAdmin)
+	if err != nil {
+		return err
+	}
+
+	ch := new(Challenge)
+	err = DB.QueryRow("SELECT id, user_id FROM challenges WHERE id = ? LIMIT 1", id).Scan(&ch.ID, &ch.UserID)
+	if err != nil {
+		return err
+	}
+
+	if int(userIDFloat) != ch.UserID && !u.IsAdmin {
+		return fmt.Errorf("no permisson to update")
+	}
+
+	_, err = DB.Exec(`
 		DELETE FROM challenges
 		WHERE id = ?`, id)
 
@@ -193,11 +168,37 @@ func DeleteChallenge(id int) error {
 	return nil
 }
 
-func UpdateChallenge(c *Challenge) error {
+func UpdateChallenge(ctx context.Context, c *Challenge) error {
+	token, claims, _ := jwtauth.FromContext(ctx)
+
+	if token == nil || jwt.Validate(token) != nil {
+		return fmt.Errorf("unable to validate user token")
+	}
+	userIDFloat, ok := claims["user_id"].(float64)
+	if !ok {
+		return fmt.Errorf("unable to convert user_id to float")
+	}
+
+	u := new(User)
+	err := DB.QueryRow("SELECT id, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.IsAdmin)
+	if err != nil {
+		return err
+	}
+
+	ch := new(Challenge)
+	err = DB.QueryRow("SELECT id, user_id FROM challenges WHERE id = ? LIMIT 1", c.ID).Scan(&ch.ID, &ch.UserID)
+	if err != nil {
+		return err
+	}
+
+	if int(userIDFloat) != ch.UserID && !u.IsAdmin {
+		return fmt.Errorf("no permisson to update")
+	}
+
 	if !IsValidDate(c.StartDate) || !IsValidDate(c.EndDate) {
 		return fmt.Errorf("invalid dates")
 	}
-	_, err := DB.Exec(`
+	_, err = DB.Exec(`
 		UPDATE challenges
 		SET title = ?, description = ?, unit = ?, goal_points = ?, start_date = ?, end_date = ?
 		WHERE id = ?`, c.Title, c.Description, c.Unit, c.GoalPoints, c.StartDate, c.EndDate, c.ID)

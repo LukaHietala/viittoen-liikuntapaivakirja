@@ -9,6 +9,7 @@ type Challenge struct {
 	StartDate    string         `json:"start_date"`
 	EndDate      string         `json:"end_date"`
 	Pot          int            `json:"pot"`
+	UserID       int            `json:"user_id"`
 	Performances []*Performance `json:"performances"`
 }
 

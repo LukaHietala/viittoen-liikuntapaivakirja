@@ -62,7 +62,6 @@
 							<input
 								type="date"
 								name="start_date"
-								value=""
 								x-model="$store.add.challenge.start_date"/>
 							<br/>
 							<label for="end_date">Lopetus</label>
@@ -70,7 +69,6 @@
 							<input
 								type="date"
 								name="end_date"
-								value=""
 								x-model="$store.add.challenge.end_date"/>
 						</div>
 						<div style="padding: 15px; border-top: 1px solid var(--border)">
@@ -151,7 +149,9 @@
 									<button x-on:click="$store.state.editing_id =
 														challenge.id;
 														showPerformances = false"
-											class="secondary-btn icon-btn">
+											class="secondary-btn icon-btn"
+											x-show="$store.session.admin ||
+													$store.session.id == challenge.user_id">
 										<img src="/static/pen.svg" alt="Muokkaa" />
 									</button>
 								</div>
@@ -272,7 +272,7 @@
 											Tallenna
 										</button>
 										<button
-											x-show="(!confirm) && $store.session.admin"
+											x-show="!confirm"
 											x-on:click="confirm = true">
 											Poista
 										</button>
@@ -304,7 +304,8 @@
 		document.addEventListener("alpine:init", async () => {
 			Alpine.store('session', {
 				loggedIn: false,
-				admin: false
+				admin: false,
+				id: null
 			});
 			
 			Alpine.store("add", {
@@ -425,3 +426,4 @@
 		});
 	</script>
 </html>
+

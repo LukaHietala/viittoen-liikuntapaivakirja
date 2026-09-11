@@ -62,8 +62,7 @@ func Serve(contentFS fs.FS, ms *services.MailService) http.Handler {
 		})
 
 		r.Get("/challenges", func(w http.ResponseWriter, r *http.Request) {
-			// TODO: Rename html
-			http.ServeFileFS(w, r, templateFS, "chanllenges.html")
+			http.ServeFileFS(w, r, templateFS, "challenges.html")
 		})
 	})
 
@@ -113,17 +112,12 @@ func Serve(contentFS fs.FS, ms *services.MailService) http.Handler {
 
 			r.Route("/challenges", func(r chi.Router) {
 				r.Get("/active", GetActiveChallenges)
-				r.Get("/latest", GetLatestChallenge)
 				r.Get("/", GetChallenges)
 				r.Get("/{id}", GetChallenge)
 				r.Post("/", CreateChallenge)
 				r.Patch("/", UpdateChallenge)
-				r.Route("/", func(r chi.Router) {
-					r.Use(AdminOnly)
-					r.Delete("/{id}", DeleteChallenge)
-				})
+				r.Delete("/{id}", DeleteChallenge)
 			})
-
 
 			r.Route("/performances", func(r chi.Router) {
 				r.Post("/", CreatePerformance)
@@ -457,6 +451,7 @@ func GetActiveChallenges(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateChallenge(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	var req db.Challenge
 
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -473,7 +468,7 @@ func CreateChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.AddChallenge(&req)
+	err = db.AddChallenge(ctx, &req)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -482,6 +477,7 @@ func CreateChallenge(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateChallenge(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	var req db.Challenge
 
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -498,7 +494,7 @@ func UpdateChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.UpdateChallenge(&req)
+	err = db.UpdateChallenge(ctx, &req)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -507,6 +503,7 @@ func UpdateChallenge(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteChallenge(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
 		log.Println(err)
@@ -514,24 +511,12 @@ func DeleteChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.DeleteChallenge(id)
+	err = db.DeleteChallenge(ctx, id)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
 		return
 	}
-}
-
-func GetLatestChallenge(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	challenge, err := db.GetLatestChallenge(ctx)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(challenge)
 }
 
 func CreatePerformance(w http.ResponseWriter, r *http.Request) {

@@ -251,7 +251,7 @@ func ForgotPassword(w http.ResponseWriter, r *http.Request, ms *services.MailSer
 	_, err = mail.ParseAddress(req.Email)
 	if err != nil {
 		res := ErrResponse{
-			Message: "Email ei ole oikeassa muodossa",
+			Message: "Sähköposti ei ole oikeassa muodossa",
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(400)

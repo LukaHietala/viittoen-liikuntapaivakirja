@@ -21,7 +21,7 @@ body {
 }
 
 main {
-    margin: 25px auto;
+    margin: 50px auto;
     max-width: 850px;
 	padding: 0 25px;	
 }
@@ -38,9 +38,25 @@ a {
 }
 
 .navbar {
+    background-color: white;
+    border: 1px solid var(--border);
+    position: absolute;
+    font-size: 1.1em;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+.navbar-row {
     padding: 10px;
     display: flex;
     justify-content: space-between;
+}
+
+.navbar-col {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
 }
 
 .btn-link {
@@ -68,7 +84,6 @@ a {
     gap: 6px;
 }
 
-
 .item {
     background-color: white;
     border: 1px solid #e3e3e3;
@@ -91,7 +106,20 @@ a {
     padding: 15px;
 }
 
+.desktop {
+	display: none;
+}
+
+.mobile {
+	display: block;
+}
+
+
  @media (min-width: 700px) {
+     .navbar {
+        position: inherit;
+        border-radius: 5px;
+     }
      .item {
         flex-direction: row;
         justify-content: space-between;
@@ -107,8 +135,15 @@ a {
     .item-info {
         padding: 0;
     }
-}
-
+	
+	.desktop {
+		display: block;
+	}
+	
+	.mobile {
+		display: none;
+	}
+ }
 
 .active {
     border: 1px solid var(--primary);

@@ -10,24 +10,45 @@
 		<link rel="stylesheet" href="static/styles.css" />
 		<title>Muokkaa haasteita</title>
 	</head>
-	<body x-data="">
+	<body x-data="{ showNav: false }">
 		<main>
+            <nav class="navbar"> 
+                <div class="navbar-row">
+                    <div class="desktop">
+                        <a href="/" class="btn-link">Etusivu</a>
+                        <a href="/profile" class="btn-link">Profiili</a>
+                        <a href="/challenges"
+						   class="btn-link active-nav-item">Haasteet</a>
+                        <a href="/admin" x-show="$store.session.admin"
+						   class="btn-link" x-cloak>
+                            Ylläpitäjälle
+                        </a>
+                    </div>
+                    <div class="desktop">
+                        <a href="/logout" class="btn-link">Kirjaudu ulos</a>
+                    </div>
+                    <div class="mobile"></div>
+                    <div class="mobile">
+                        <button class="secondary-btn icon-btn"
+                                x-on:click="showNav = !showNav">
+                            <img src="/static/menu.svg" alt="Avaa navigaatio" />
+                        </button>
+                    </div>
+                </div>
+                <!-- MOBILE NAV -->
+                <div x-show="showNav" class="navbar-col" x-transition>
+                    <a href="/" class="btn-link">Etusivu</a>
+                    <a href="/profile" class="btn-link">Profiili</a>
+                    <a href="/challenges"
+					   class="btn-link active-nav-item">Haasteet</a>
+                    <a href="/admin" x-show="$store.session.admin"
+                       class="btn-link" x-cloak>
+                        Ylläpitäjälle
+                    </a>
+					<a href="/logout" class="btn-link">Kirjaudu ulos</a>
+                </div>
+            </nav>
 			<div class="container">
-                <section>
-                    <nav class="navbar"> 
-                        <div>
-                            <a href="/" class="btn-link">Etusivu</a>
-                            <a href="/profile" class="btn-link">Profiili</a>
-                            <a href="/challenges" class="btn-link active-nav-item">Haasteet</a>
-                            <a href="/admin" x-show="$store.session.admin" class="btn-link">
-                                Ylläpitäjälle
-                            </a>
-                        </div>
-                        <div>
-                            <a href="/logout" class="btn-link">Kirjaudu ulos</a>
-                        </div>
-                    </nav>
-                </section>
                 <h2>Haasteet</h2>
 				<section x-data="{ adding: false }">
 					<div x-show="adding">

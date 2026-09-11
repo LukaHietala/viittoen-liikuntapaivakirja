@@ -7,25 +7,44 @@
 				src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js">
 		</script>
         <link rel="stylesheet" href="static/styles.css" />
-		<title>Cock Cock Cock</title>
-		<body x-data="">
+		<title>Aktiiviset haasteet</title>
+		<body x-data="{ showNav: false }">
 			<main>
+                <nav class="navbar" x-show="$store.session.loggedIn"> 
+                    <div class="navbar-row">
+                        <div class="desktop">
+                            <a href="/" class="btn-link active-nav-item">Etusivu</a>
+                            <a href="/profile" class="btn-link">Profiili</a>
+                            <a href="/challenges" class="btn-link">Haasteet</a>
+                            <a href="/admin" x-show="$store.session.admin"
+							   class="btn-link" x-cloak>
+                                Ylläpitäjälle
+                            </a>
+                        </div>
+                        <div class="desktop">
+                            <a href="/logout" class="btn-link">Kirjaudu ulos</a>
+                        </div>
+                        <div class="mobile"></div>
+                        <div class="mobile">
+                            <button class="secondary-btn icon-btn"
+                                    x-on:click="showNav = !showNav">
+                                <img src="/static/menu.svg" alt="Avaa navigaatio" />
+                            </button>
+                        </div>
+                    </div>
+                    <!-- MOBILE NAV -->
+                    <div x-show="showNav" class="navbar-col" x-transition>
+                        <a href="/" class="btn-link active-nav-item">Etusivu</a>
+                        <a href="/profile" class="btn-link">Profiili</a>
+                        <a href="/challenges" class="btn-link">Haasteet</a>
+                        <a href="/admin" x-show="$store.session.admin"
+                           class="btn-link" x-cloak>
+                            Ylläpitäjälle
+                        </a>
+						<a href="/logout" class="btn-link">Kirjaudu ulos</a>
+                    </div>
+                </nav>
 				<div class="container">
-					<section x-show="$store.session.loggedIn">
-						<nav class="navbar"> 
-							<div>
-								<a href="/" class="btn-link active-nav-item">Etusivu</a>
-								<a href="/profile" class="btn-link">Profiili</a>
-								<a href="/challenges" class="btn-link">Haasteet</a>
-								<a href="/admin" x-show="$store.session.admin" class="btn-link" x-cloak>
-									Ylläpitäjälle
-								</a>
-							</div>
-							<div>
-								<a href="/logout" class="btn-link">Kirjaudu ulos</a>
-							</div>
-						</nav>
-					</section>
 					<h2 x-show="$store.session.loggedIn">Aktiiviset haasteet</h2>
 					<section x-show="!$store.session.loggedIn" style="padding: 15px;">
 						<p style="margin: 0;">
@@ -69,8 +88,8 @@
 
 									<div style="padding: 15px">
                                         <input x-model.number="addPoints"
-                                        min="1"
-                                        type="number"/>
+											   min="1"
+											   type="number"/>
                                         <span x-text="challenge.unit"></span>
 									</div>
 									<div style="padding: 15px;
@@ -110,7 +129,6 @@
 				
 				Alpine.store('state', {
 					challenges: [],
-					lastActive: null,
 					
 				});
 
@@ -135,21 +153,8 @@
 					}
 				}
 				
-				async function getLast() { 
-					try {
-						const response = await fetch("/api/challenges/latest");
-						if (!response.ok) {
-							throw new Error("Jotain meni pieleen: " + response.status);
-						}
-						return await response.json()
-					} catch (e) {
-    					console.error(e.message);
-					}
-				}
-
 				Alpine.store('state', {
 					challenges: await getChallenges(),
-					lastActive: await getLast()
 				});
 
 				window.addPerformance = async (event, points, challenge_id) => {

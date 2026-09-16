@@ -10,8 +10,8 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
-func GetAllUsers() ([]*User, error) {
-	rows, err := DB.Query(`SELECT id, name, email, is_admin FROM users`)
+func (s *Store) ListUsers() ([]*User, error) {
+	rows, err := s.db.Query(`SELECT id, name, email, is_admin FROM users`)
 	if err != nil {
 		return nil, err
 	}
@@ -32,13 +32,14 @@ func GetAllUsers() ([]*User, error) {
 	}
 
 	for _, u := range users {
-		uRows, err := DB.Query(`
+		uRows, err := s.db.Query(`
 			SELECT * FROM performances
 			WHERE user_id = ?`, u.ID)
 		if err != nil {
 			return nil, err
 		}
 
+		performances := make([]*Performance, 0)
 		for uRows.Next() {
 			p := new(Performance)
 			err = uRows.Scan(&p.ID, &p.Points, &p.UserID, &p.ChallengeID, &p.CreatedAt)
@@ -46,7 +47,7 @@ func GetAllUsers() ([]*User, error) {
 				uRows.Close()
 				return nil, err
 			}
-			u.Performances = append(u.Performances, p)
+			performances = append(performances, p)
 		}
 
 		if err = uRows.Err(); err != nil {
@@ -54,15 +55,17 @@ func GetAllUsers() ([]*User, error) {
 			return nil, err
 		}
 
+		u.Performances = performances
+
 		uRows.Close()
 	}
 
 	return users, nil
 }
 
-func GetUser(id int) (*User, error) {
+func (s *Store) GetUserByID(id int) (*User, error) {
 	u := new(User)
-	err := DB.QueryRow("SELECT id, name, email, is_admin FROM users WHERE id = ? LIMIT 1", id).Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin)
+	err := s.db.QueryRow("SELECT id, name, email, is_admin FROM users WHERE id = ? LIMIT 1", id).Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("no user found based on id: %d", id)
@@ -72,14 +75,14 @@ func GetUser(id int) (*User, error) {
 	return u, nil
 }
 
-func AddUser(u *User, ms *services.MailService) error {
+func (s *Store) AddUser(u *User, ms *services.MailService) error {
 	plain := RandomString(5)
 	hash, err := HashPassword(plain)
 	if err != nil {
 		return err
 	}
 
-	_, err = DB.Exec(`
+	_, err = s.db.Exec(`
 		INSERT INTO users(name, email, password_hash, is_admin)
 		VALUES(?, ?, ?, ?)`, u.Name, u.Email, hash, u.IsAdmin)
 
@@ -95,7 +98,7 @@ func AddUser(u *User, ms *services.MailService) error {
 	return nil
 }
 
-func UpdateUser(ctx context.Context, u *User) error {
+func (s *Store) UpdateUser(ctx context.Context, u *User) error {
 	token, claims, _ := jwtauth.FromContext(ctx)
 
 	if token == nil || jwt.Validate(token) != nil {
@@ -109,12 +112,11 @@ func UpdateUser(ctx context.Context, u *User) error {
 		return fmt.Errorf("can't remove own admin privileges")
 	}
 
-	_, err := DB.ExecContext(ctx, `
+	_, err := s.db.ExecContext(ctx, `
 	UPDATE users
 	SET name = ?, email = ?, is_admin = ?
 	WHERE id = ?`, u.Name, u.Email, u.IsAdmin, u.ID)
 
-	// TODO: forgot pass
 	if err != nil {
 		return err
 	}
@@ -122,7 +124,7 @@ func UpdateUser(ctx context.Context, u *User) error {
 	return nil
 }
 
-func DeleteUser(ctx context.Context, id int) error {
+func (s *Store) DeleteUser(ctx context.Context, id int) error {
 	token, claims, _ := jwtauth.FromContext(ctx)
 
 	if token == nil || jwt.Validate(token) != nil {
@@ -136,7 +138,7 @@ func DeleteUser(ctx context.Context, id int) error {
 		return fmt.Errorf("can't remove self")
 	}
 
-	_, err := DB.ExecContext(ctx, `
+	_, err := s.db.ExecContext(ctx, `
 		DELETE FROM users
 		WHERE id = ?`, id)
 
@@ -147,7 +149,7 @@ func DeleteUser(ctx context.Context, id int) error {
 	return nil
 }
 
-func GetSelf(ctx context.Context) (*User, error) {
+func (s *Store) GetSelf(ctx context.Context) (*User, error) {
 	token, claims, _ := jwtauth.FromContext(ctx)
 
 	if token == nil || jwt.Validate(token) != nil {
@@ -159,11 +161,11 @@ func GetSelf(ctx context.Context) (*User, error) {
 	}
 
 	u := new(User)
-	err := DB.QueryRow("SELECT id, name, email, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin)
+	err := s.db.QueryRowContext(ctx, "SELECT id, name, email, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := DB.Query(`
+	rows, err := s.db.QueryContext(ctx, `
 		SELECT * FROM performances
 		WHERE user_id = ?`, u.ID)
 	if err != nil {
@@ -173,6 +175,7 @@ func GetSelf(ctx context.Context) (*User, error) {
 		return nil, err
 	}
 
+	performances := make([]*Performance, 0)
 	for rows.Next() {
 		p := new(Performance)
 		err = rows.Scan(&p.ID, &p.Points, &p.UserID, &p.ChallengeID, &p.CreatedAt)
@@ -180,7 +183,7 @@ func GetSelf(ctx context.Context) (*User, error) {
 			rows.Close()
 			return nil, err
 		}
-		u.Performances = append(u.Performances, p)
+		performances = append(performances, p)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -188,14 +191,16 @@ func GetSelf(ctx context.Context) (*User, error) {
 		return nil, err
 	}
 
+	u.Performances = performances
+
 	rows.Close()
 
 	return u, nil
 }
 
-func GetSession(id int) (*User, error) {
+func (s *Store) GetSession(id int) (*User, error) {
 	u := new(User)
-	err := DB.QueryRow("SELECT id, name, is_admin FROM users WHERE id = ? LIMIT 1", id).Scan(&u.ID, &u.Name, &u.IsAdmin)
+	err := s.db.QueryRow("SELECT id, name, is_admin FROM users WHERE id = ? LIMIT 1", id).Scan(&u.ID, &u.Name, &u.IsAdmin)
 	if err != nil {
 		return nil, err
 	}
@@ -203,9 +208,9 @@ func GetSession(id int) (*User, error) {
 	return u, nil
 }
 
-func VerifyUser(name, password string) (int, error) {
+func (s *Store) VerifyUser(name, password string) (int, error) {
 	u := new(User)
-	row := DB.QueryRow("SELECT id, name, password_hash FROM users WHERE name = ?", name)
+	row := s.db.QueryRow("SELECT id, name, password_hash FROM users WHERE name = ?", name)
 	err := row.Scan(&u.ID, &u.Name, &u.PasswordHash)
 
 	if err != nil {
@@ -222,9 +227,9 @@ func VerifyUser(name, password string) (int, error) {
 	}
 }
 
-func StartResetPassword(email, token string, ms *services.MailService) error {
+func (s *Store) StartResetPassword(email, token string, ms *services.MailService) error {
 	u := new(User)
-	row := DB.QueryRow("SELECT id FROM users WHERE email = ?", email)
+	row := s.db.QueryRow("SELECT id FROM users WHERE email = ?", email)
 	err := row.Scan(&u.ID)
 
 	if err != nil {
@@ -234,6 +239,7 @@ func StartResetPassword(email, token string, ms *services.MailService) error {
 		return err
 	}
 
+	// TODO!!!!!
 	resetLink := "http://localhost:3000/reset-password?token=" + token
 
 	err = ms.Send("Nollaa salasana", resetLink, email)
@@ -244,7 +250,7 @@ func StartResetPassword(email, token string, ms *services.MailService) error {
 	return nil
 }
 
-func FinishResetPassword(token jwt.Token, newPassword string) error {
+func (s *Store) FinishResetPassword(token jwt.Token, newPassword string) error {
 	var email string
 
 	err := token.Get(`email`, &email)
@@ -257,7 +263,7 @@ func FinishResetPassword(token jwt.Token, newPassword string) error {
 		return err
 	}
 
-	_, err = DB.Exec(`
+	_, err = s.db.Exec(`
 	UPDATE users
 	SET password_hash = ?
 	WHERE email = ?`, hash, email)
@@ -267,5 +273,4 @@ func FinishResetPassword(token jwt.Token, newPassword string) error {
 	}
 
 	return nil
-
 }

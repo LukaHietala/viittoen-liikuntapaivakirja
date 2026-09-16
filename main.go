@@ -26,17 +26,17 @@ func main() {
 	}
 	ms := services.NewMailService(cfg.MailgunAPIKey, cfg.MailgunDomain)
 	api.InitAuth(cfg.JWTSecret)
-	server := &http.Server{
-		Addr:    "0.0.0.0:3000",
-		Handler: api.Serve(contentFS, ms),
-	}
-
 	conn, err := db.Connect()
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer conn.Close()
-	db.DB = conn
+	store := db.NewStore(conn)
+
+	server := &http.Server{
+		Addr:    "0.0.0.0:3000",
+		Handler: api.Serve(contentFS, ms, store),
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

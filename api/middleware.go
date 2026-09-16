@@ -3,7 +3,6 @@ package api
 import (
 	"net/http"
 
-	"github.com/LukaHietala/viittoen-liikuntapaivakirja/db"
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
@@ -65,7 +64,7 @@ func AdminOnly(next http.Handler) http.Handler {
 			return
 		}
 
-		user, err := db.GetUser(int(userIDFloat))
+		user, err := store.GetUserByID(int(userIDFloat))
 
 		if err != nil {
 			ResetJWTCookies(w)
@@ -97,7 +96,7 @@ func SessionOnly(next http.Handler) http.Handler {
 			return
 		}
 
-		user, err := db.GetUser(int(userIDFloat))
+		user, err := store.GetUserByID(int(userIDFloat))
 
 		if err != nil {
 			ResetJWTCookies(w)

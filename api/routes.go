@@ -36,7 +36,12 @@ type ResetPasswordRequest struct {
 	Token       string `json:"token"`
 }
 
-func Serve(contentFS fs.FS, ms *services.MailService) http.Handler {
+var store *db.Store
+
+func Serve(contentFS fs.FS, ms *services.MailService, s *db.Store) http.Handler {
+	// :D
+	store = s
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
@@ -178,7 +183,7 @@ func ValidSession(w http.ResponseWriter, r *http.Request) {
 		res["ok"] = false
 
 	}
-	user, err := db.GetSession(int(userIDFloat))
+	user, err := store.GetSession(int(userIDFloat))
 	if err != nil || user == nil {
 		res["ok"] = false
 	}
@@ -213,7 +218,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := db.VerifyUser(req.Name, req.Password)
+	id, err := store.VerifyUser(req.Name, req.Password)
 	if err != nil {
 		res := ErrResponse{
 			Message: "Nimi tai salasana on väärin",
@@ -260,7 +265,7 @@ func ForgotPassword(w http.ResponseWriter, r *http.Request, ms *services.MailSer
 	}
 
 	token := MakeResetToken(req.Email)
-	err = db.StartResetPassword(req.Email, token, ms)
+	err = store.StartResetPassword(req.Email, token, ms)
 	if err != nil {
 		res := ErrResponse{
 			Message: "Käyttäjää ei löytynyt",
@@ -304,7 +309,7 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(res)
 		return
 	}
-	err = db.FinishResetPassword(token, req.NewPassword)
+	err = store.FinishResetPassword(token, req.NewPassword)
 	if err != nil {
 		res := ErrResponse{
 			Message: "Jotain meni pieleen",
@@ -320,7 +325,7 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := db.GetAllUsers()
+	users, err := store.ListUsers()
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -332,7 +337,7 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 
 func GetSelf(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	user, err := db.GetSelf(ctx)
+	user, err := store.GetSelf(ctx)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -359,7 +364,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.UpdateUser(ctx, &req)
+	err = store.UpdateUser(ctx, &req)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -376,7 +381,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.DeleteUser(ctx, id)
+	err = store.DeleteUser(ctx, id)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -392,7 +397,7 @@ func GetChallenge(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(500), 500)
 		return
 	}
-	challenge, err := db.GetChallenge(ctx, id)
+	challenge, err := store.GetChallengeByID(ctx, id)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -418,7 +423,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request, ms *services.MailService
 		return
 	}
 
-	err = db.AddUser(&req, ms)
+	err = store.AddUser(&req, ms)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -428,7 +433,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request, ms *services.MailService
 
 func GetChallenges(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	challenges, err := db.GetAllChallenges(ctx, false)
+	challenges, err := store.ListChallenges(ctx, false)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -440,7 +445,7 @@ func GetChallenges(w http.ResponseWriter, r *http.Request) {
 
 func GetActiveChallenges(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	challenges, err := db.GetAllChallenges(ctx, true)
+	challenges, err := store.ListChallenges(ctx, true)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -468,7 +473,7 @@ func CreateChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.AddChallenge(ctx, &req)
+	err = store.AddChallenge(ctx, &req)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -494,7 +499,7 @@ func UpdateChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.UpdateChallenge(ctx, &req)
+	err = store.UpdateChallenge(ctx, &req)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -511,7 +516,7 @@ func DeleteChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.DeleteChallenge(ctx, id)
+	err = store.DeleteChallenge(ctx, id)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -531,7 +536,7 @@ func CreatePerformance(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	err = db.AddPerformance(ctx, &req)
+	err = store.AddPerformance(ctx, &req)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)
@@ -548,7 +553,7 @@ func DeletePerformance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.DeletePerformance(ctx, id)
+	err = store.DeletePerformance(ctx, id)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(500), 500)

@@ -10,9 +10,9 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
-func GetChallenge(ctx context.Context, id int) (*Challenge, error) {
+func (s *Store) GetChallengeByID(ctx context.Context, id int) (*Challenge, error) {
 	c := new(Challenge)
-	err := DB.QueryRowContext(ctx,
+	err := s.db.QueryRowContext(ctx,
 		"SELECT * FROM challenges WHERE id = ? LIMIT 1", id).
 		Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints, &c.StartDate, &c.EndDate, &c.UserID)
 	if err != nil {
@@ -24,8 +24,8 @@ func GetChallenge(ctx context.Context, id int) (*Challenge, error) {
 	return c, nil
 }
 
-func GetAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
-	rows, err := DB.QueryContext(ctx, "SELECT * FROM challenges")
+func (s *Store) ListChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT * FROM challenges")
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func GetAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
 	}
 
 	for _, c := range challenges {
-		pRows, err := DB.QueryContext(ctx, `
+		pRows, err := s.db.QueryContext(ctx, `
 			SELECT * FROM performances
 			WHERE challenge_id = ?`, c.ID)
 		if err != nil {
@@ -76,6 +76,7 @@ func GetAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
 
 		var pot int
 
+		performances := make([]*Performance, 0)
 		for pRows.Next() {
 			p := new(Performance)
 			err = pRows.Scan(&p.ID, &p.Points, &p.UserID,
@@ -86,7 +87,7 @@ func GetAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
 			}
 			pot += p.Points
 
-			c.Performances = append(c.Performances, p)
+			performances = append(performances, p)
 		}
 
 		if err := pRows.Err(); err != nil {
@@ -94,9 +95,12 @@ func GetAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
 			return nil, err
 		}
 
+		c.Performances = performances
+
 		for _, p := range c.Performances {
 			u := new(User)
-			err := DB.QueryRowContext(ctx, `
+			// Leaving user performances out is intentional
+			err := s.db.QueryRowContext(ctx, `
 				SELECT id, name FROM users WHERE id = ?
 			`, p.UserID).Scan(&u.ID, &u.Name)
 			if err == nil {
@@ -110,7 +114,7 @@ func GetAllChallenges(ctx context.Context, active bool) ([]*Challenge, error) {
 	return challenges, nil
 }
 
-func AddChallenge(ctx context.Context, c *Challenge) error {
+func (s *Store) AddChallenge(ctx context.Context, c *Challenge) error {
 	_, claims, _ := jwtauth.FromContext(ctx)
 	userIDFloat, ok := claims["user_id"].(float64)
 	if !ok {
@@ -119,7 +123,7 @@ func AddChallenge(ctx context.Context, c *Challenge) error {
 	if !IsValidDate(c.StartDate) || !IsValidDate(c.EndDate) {
 		return fmt.Errorf("invalid dates")
 	}
-	_, err := DB.Exec(`
+	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO challenges(title, description, unit, goal_points, start_date, end_date, user_id)
 		VALUES(?, ?, ?, ?, ?, ?, ?)`, c.Title, c.Description, c.Unit, c.GoalPoints, c.StartDate, c.EndDate, int(userIDFloat))
 
@@ -130,7 +134,7 @@ func AddChallenge(ctx context.Context, c *Challenge) error {
 	return nil
 }
 
-func DeleteChallenge(ctx context.Context, id int) error {
+func (s *Store) DeleteChallenge(ctx context.Context, id int) error {
 	token, claims, _ := jwtauth.FromContext(ctx)
 
 	if token == nil || jwt.Validate(token) != nil {
@@ -142,13 +146,13 @@ func DeleteChallenge(ctx context.Context, id int) error {
 	}
 
 	u := new(User)
-	err := DB.QueryRow("SELECT id, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.IsAdmin)
+	err := s.db.QueryRowContext(ctx, "SELECT id, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.IsAdmin)
 	if err != nil {
 		return err
 	}
 
 	ch := new(Challenge)
-	err = DB.QueryRow("SELECT id, user_id FROM challenges WHERE id = ? LIMIT 1", id).Scan(&ch.ID, &ch.UserID)
+	err = s.db.QueryRowContext(ctx, "SELECT id, user_id FROM challenges WHERE id = ? LIMIT 1", id).Scan(&ch.ID, &ch.UserID)
 	if err != nil {
 		return err
 	}
@@ -157,7 +161,7 @@ func DeleteChallenge(ctx context.Context, id int) error {
 		return fmt.Errorf("no permisson to update")
 	}
 
-	_, err = DB.Exec(`
+	_, err = s.db.ExecContext(ctx, `
 		DELETE FROM challenges
 		WHERE id = ?`, id)
 
@@ -168,7 +172,7 @@ func DeleteChallenge(ctx context.Context, id int) error {
 	return nil
 }
 
-func UpdateChallenge(ctx context.Context, c *Challenge) error {
+func (s *Store) UpdateChallenge(ctx context.Context, c *Challenge) error {
 	token, claims, _ := jwtauth.FromContext(ctx)
 
 	if token == nil || jwt.Validate(token) != nil {
@@ -180,13 +184,13 @@ func UpdateChallenge(ctx context.Context, c *Challenge) error {
 	}
 
 	u := new(User)
-	err := DB.QueryRow("SELECT id, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.IsAdmin)
+	err := s.db.QueryRowContext(ctx, "SELECT id, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.IsAdmin)
 	if err != nil {
 		return err
 	}
 
 	ch := new(Challenge)
-	err = DB.QueryRow("SELECT id, user_id FROM challenges WHERE id = ? LIMIT 1", c.ID).Scan(&ch.ID, &ch.UserID)
+	err = s.db.QueryRowContext(ctx, "SELECT id, user_id FROM challenges WHERE id = ? LIMIT 1", c.ID).Scan(&ch.ID, &ch.UserID)
 	if err != nil {
 		return err
 	}
@@ -198,7 +202,7 @@ func UpdateChallenge(ctx context.Context, c *Challenge) error {
 	if !IsValidDate(c.StartDate) || !IsValidDate(c.EndDate) {
 		return fmt.Errorf("invalid dates")
 	}
-	_, err = DB.Exec(`
+	_, err = s.db.ExecContext(ctx, `
 		UPDATE challenges
 		SET title = ?, description = ?, unit = ?, goal_points = ?, start_date = ?, end_date = ?
 		WHERE id = ?`, c.Title, c.Description, c.Unit, c.GoalPoints, c.StartDate, c.EndDate, c.ID)
@@ -210,14 +214,14 @@ func UpdateChallenge(ctx context.Context, c *Challenge) error {
 	return nil
 }
 
-func AddPerformance(ctx context.Context, p *Performance) error {
+func (s *Store) AddPerformance(ctx context.Context, p *Performance) error {
 	_, claims, _ := jwtauth.FromContext(ctx)
 	userIDFloat, ok := claims["user_id"].(float64)
 	if !ok {
 		return fmt.Errorf("invalid user id in session")
 	}
 
-	_, err := DB.Exec(`INSERT INTO performances(points, user_id, challenge_id)
+	_, err := s.db.ExecContext(ctx, `INSERT INTO performances(points, user_id, challenge_id)
 					VALUES (?,?,?)`, p.Points, int(userIDFloat), p.ChallengeID)
 	if err != nil {
 		return err
@@ -226,7 +230,7 @@ func AddPerformance(ctx context.Context, p *Performance) error {
 	return nil
 }
 
-func DeletePerformance(ctx context.Context, id int) error {
+func (s *Store) DeletePerformance(ctx context.Context, id int) error {
 	token, claims, _ := jwtauth.FromContext(ctx)
 
 	if token == nil || jwt.Validate(token) != nil {
@@ -238,13 +242,13 @@ func DeletePerformance(ctx context.Context, id int) error {
 	}
 
 	u := new(User)
-	err := DB.QueryRow("SELECT id, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.IsAdmin)
+	err := s.db.QueryRowContext(ctx, "SELECT id, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.IsAdmin)
 	if err != nil {
 		return err
 	}
 
 	p := new(Performance)
-	err = DB.QueryRow("SELECT id, user_id FROM performances WHERE id = ? LIMIT 1", id).Scan(&p.ID, &p.UserID)
+	err = s.db.QueryRowContext(ctx, "SELECT id, user_id FROM performances WHERE id = ? LIMIT 1", id).Scan(&p.ID, &p.UserID)
 	if err != nil {
 		return err
 	}
@@ -253,7 +257,7 @@ func DeletePerformance(ctx context.Context, id int) error {
 		return fmt.Errorf("no permisson to delete performance")
 	}
 
-	_, err = DB.Exec(`
+	_, err = s.db.ExecContext(ctx, `
 		DELETE FROM performances
 		WHERE id = ?`, id)
 

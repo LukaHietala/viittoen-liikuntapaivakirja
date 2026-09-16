@@ -23,8 +23,7 @@ var schema = `
 		goal_points INTEGER NOT NULL,
 		start_date TEXT NOT NULL,
 		end_date TEXT NOT NULL,
-		user_id	INTEGER NOT NULL,
-		FOREIGN KEY(user_id) REFERENCES users(id)
+		user_id	INTEGER NOT NULL
 	);
 
 	CREATE TABLE IF NOT EXISTS performances (
@@ -33,8 +32,8 @@ var schema = `
 		user_id INTEGER NOT NULL,
 		challenge_id INTEGER NOT NULL,
 		created_at TEXT NOT NULL DEFAULT (datetime(CURRENT_TIMESTAMP, 'localtime')),
-		FOREIGN KEY(user_id) REFERENCES users(id),
-		FOREIGN KEY(challenge_id) REFERENCES challenges(id)
+		FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+		FOREIGN KEY(challenge_id) REFERENCES challenges(id) ON DELETE CASCADE
 	);
 `
 

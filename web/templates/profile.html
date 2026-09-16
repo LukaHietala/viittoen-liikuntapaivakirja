@@ -79,26 +79,20 @@
                                     </span>
                                 </div>
                                 <div class="item-actions">
-                                    <button x-show="!open"
-                                            x-on:click="challenge = await getChallenge(
-                                                        $event,
-                                                        performance.challenge_id);
-														open = true">
-                                        Näytä haaste
-                                    </button>
-                                    <button x-show="open"
-                                            x-on:click="open = false">
+                                    <button x-on:click="open = !open">
                                         Näytä haaste
                                     </button>
                                     <button x-on:click="await deletePerformance(
-                                        $event,
-                                        performance.id)"
-                                        class="secondary-btn icon-btn">
+														$event,
+														performance.id)"
+											class="secondary-btn icon-btn"
+											x-show="Date.parse(performance.challenge.end_date)
+													> Date.now()">
                                         <img src="/static/can.svg" alt="Poista" />
                                     </button>
                                 </div>
                             </div>
-                            <template x-if="open && challenge != null">
+                            <template x-if="open" x-data="{ challenge: performance.challenge }">
                                 <section style="margin-top: 6px;">
                                     <div style="padding: 15px;">
                                         <strong x-text="challenge.title"></strong><br />
@@ -106,23 +100,15 @@
                                         <span x-text="challenge.start_date"></span>
                                         -
                                         <span x-text="challenge.end_date"></span>
-										</button>
                                     </div>
                                 </section>
-                            </template>
-                            <template x-if="open && challenge == null">
-                                <section style="margin-top: 6px;">
-                                    <div style="padding: 15px;">
-                                        <span>Haastetta ei löytynyt, se on todennäköisesti poistettu</span>
-                                    </div>
-                                </section>
-                            </template>
+							</template>
                         </div>
                     </template>
                 </div>
                 <section x-show="$store.state.self.performances == null ||
                                  $store.state.self.performances.length == 0" style="padding: 15px;">
-                    <span>Ei haasteita.</span>
+                    <span>Ei suorituksia.</span>
                 </section>
             </div>
 		</main>
@@ -153,18 +139,6 @@
 				});
 			};
 			await getProfile();
-			// Challenges
-			window.getChallenge = async (e, challenge_id) => {
-				try {
-					const response = await fetch(`/api/challenges/${challenge_id}`);
-					if (!response.ok) {
-						throw new Error("Jotain meni pieleen: " + response.status);
-					}
-					return await response.json();
-				} catch (e) {
-					console.error(e.message);
-				}
-			}
 			// Performances
 			window.deletePerformance = async (e, performance_id) => {
 				try {

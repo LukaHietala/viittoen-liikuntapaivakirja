@@ -40,6 +40,9 @@
 				try {
 					const response = await fetch("/login", {
 						method: "POST",
+						headers: {
+							"Content-Type": "application/json"
+						},
                         body: JSON.stringify({ name: Alpine.store("state").name, password: Alpine.store("state").password }),
 					});
 					if (!response.ok) {

@@ -211,6 +211,9 @@
 			window.addUser = async (event) => {
 				const response = await fetch("/api/users", {
 					method: "POST",
+					headers: {
+						"Content-Type": "application/json"
+					},
 					body: JSON.stringify({
 						name: Alpine.store("add").user.name,
 						email: Alpine.store("add").user.email,
@@ -232,6 +235,9 @@
 				)[0];
 				const response = await fetch(`/api/users/`, {
 					method: "PATCH",
+					headers: {
+						"Content-Type": "application/json"
+					},
 					body: JSON.stringify(user),
 				});
 			};

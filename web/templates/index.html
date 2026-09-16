@@ -128,8 +128,7 @@
 				});
 				
 				Alpine.store('state', {
-					challenges: [],
-					
+					challenges: [],					
 				});
 
 				window.leaderboard = performances => {
@@ -160,6 +159,9 @@
 				window.addPerformance = async (event, points, challenge_id) => {
 					const response = await fetch(`/api/performances`, {
 						method: "POST",
+						headers: {
+							"Content-Type": "application/json"
+						},
 						body: JSON.stringify({
 							points: points,
 							challenge_id: challenge_id

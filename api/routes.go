@@ -1,7 +1,7 @@
 package api
 
 import (
-	"encoding/json"
+	"errors"
 	"io/fs"
 	"log"
 	"net/http"
@@ -15,12 +15,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/go-chi/render"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
-
-type ErrResponse struct {
-	Message string `json:"message"`
-}
 
 type LoginRequest struct {
 	Name     string `json:"name"`
@@ -193,39 +190,24 @@ func ValidSession(w http.ResponseWriter, r *http.Request) {
 		res["name"] = user.Name
 		res["id"] = user.ID
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(res)
+	render.JSON(w, r, res)
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
-
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		w.WriteHeader(400)
+	if err := render.Decode(r, &req); err != nil {
+		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
 		return
 	}
 
 	if req.Name == "" || req.Password == "" {
-		res := ErrResponse{
-			Message: "Nimi ja salasana ovat pakollisia",
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(401)
-		json.NewEncoder(w).Encode(res)
+		render.Render(w, r, ErrInvalidRequest("Nimi ja salasana ovat pakollisia", errors.New("no name or password")))
 		return
 	}
 
 	id, err := store.VerifyUser(req.Name, req.Password)
 	if err != nil {
-		res := ErrResponse{
-			Message: "Nimi tai salasana on väärin",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(401)
-		json.NewEncoder(w).Encode(res)
+		render.Render(w, r, ErrInvalidRequest("Nimi tai salasana on väärin", err))
 		return
 	}
 
@@ -246,78 +228,46 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 func ForgotPassword(w http.ResponseWriter, r *http.Request, ms *services.MailService) {
 	var req ForgotPasswordRequest
-
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		w.WriteHeader(400)
+	if err := render.Decode(r, &req); err != nil {
+		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
 		return
 	}
 
-	_, err = mail.ParseAddress(req.Email)
+	_, err := mail.ParseAddress(req.Email)
 	if err != nil {
-		res := ErrResponse{
-			Message: "Sähköposti ei ole oikeassa muodossa",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(400)
-		json.NewEncoder(w).Encode(res)
+		render.Render(w, r, ErrInvalidRequest("Sähköposti ei ole oikeassa muodossa", err))
 		return
 	}
 
 	token := MakeResetToken(req.Email)
 	err = store.StartResetPassword(req.Email, token, ms)
 	if err != nil {
-		res := ErrResponse{
-			Message: "Käyttäjää ei löytynyt",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(404)
-		json.NewEncoder(w).Encode(res)
-		return
+		render.Render(w, r, ErrInvalidRequest("Käyttäjää ei löytynyt", err))
 	}
 	w.WriteHeader(200)
 }
 
 func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	var req ResetPasswordRequest
-
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		w.WriteHeader(400)
+	if err := render.Decode(r, &req); err != nil {
+		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
 		return
 	}
 
 	if req.Token == "" || req.NewPassword == "" {
-		res := ErrResponse{
-			Message: "Uusi salasana on pakollinen",
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(400)
-		json.NewEncoder(w).Encode(res)
+		// TODO: Erota
+		render.Render(w, r, ErrInvalidRequest("Linkki on vanhentunut tai salasana on tyhjä", errors.New("no token or new password")))
 		return
 	}
 
 	token, err := tokenAuth.Decode(req.Token)
 	if err != nil {
-		res := ErrResponse{
-			Message: "Virheellinen tai vanhentunut nollaus linkki",
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(400)
-		json.NewEncoder(w).Encode(res)
+		render.Render(w, r, ErrInvalidRequest("Linkki on vanhentunut", err))
 		return
 	}
 	err = store.FinishResetPassword(token, req.NewPassword)
 	if err != nil {
-		res := ErrResponse{
-			Message: "Jotain meni pieleen",
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(500)
-		json.NewEncoder(w).Encode(res)
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
 
@@ -327,107 +277,90 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 func GetUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := store.ListUsers()
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	render.JSON(w, r, users)
 }
 
 func GetSelf(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	user, err := store.GetSelf(ctx)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	render.JSON(w, r, user)
 }
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	var req db.User
 	ctx := r.Context()
-
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(400), 400)
+	if err := render.Decode(r, &req); err != nil {
+		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
 		return
 	}
-	defer r.Body.Close()
 
 	if req.Name == "" {
-		http.Error(w, http.StatusText(400), 400)
+		render.Render(w, r, ErrInvalidRequest("Nimi puuttuu", errors.New("name is missing")))
 		return
 	}
 
-	err = store.UpdateUser(ctx, &req)
+	err := store.UpdateUser(ctx, &req)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
-		return
+		render.Render(w, r, ErrInternal(err))
 	}
+	w.WriteHeader(200)
 }
 
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	ctx := r.Context()
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
 
 	err = store.DeleteUser(ctx, id)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
+	w.WriteHeader(200)
 }
 
 func GetChallenge(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
 	challenge, err := store.GetChallengeByID(ctx, id)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(challenge)
+	render.JSON(w, r, challenge)
 }
 
 func CreateUser(w http.ResponseWriter, r *http.Request, ms *services.MailService) {
 	var req db.User
-
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(400), 400)
+	if err := render.Decode(r, &req); err != nil {
+		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
 		return
 	}
-	defer r.Body.Close()
 
 	if req.Name == "" || req.Email == "" {
-		http.Error(w, http.StatusText(400), 400)
+		render.Render(w, r, ErrInvalidRequest("Nimi ja sähköposti ovat pakollisia", errors.New("no name or password")))
 		return
 	}
 
-	err = store.AddUser(&req, ms)
+	err := store.AddUser(&req, ms)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
+
 	}
 }
 
@@ -435,48 +368,40 @@ func GetChallenges(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	challenges, err := store.ListChallenges(ctx, false)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(challenges)
+	render.JSON(w, r, challenges)
 }
 
 func GetActiveChallenges(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	challenges, err := store.ListChallenges(ctx, true)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(challenges)
+	render.JSON(w, r, challenges)
 }
 
 func CreateChallenge(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var req db.Challenge
 
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(400), 400)
+	if err := render.Decode(r, &req); err != nil {
+		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
 		return
 	}
-	defer r.Body.Close()
 
 	// TODO:
 	if req.Title == "" {
-		http.Error(w, http.StatusText(400), 400)
+		render.Render(w, r, ErrInvalidRequest("Nimi on pakollinen", errors.New("no title")))
 		return
 	}
 
-	err = store.AddChallenge(ctx, &req)
+	err := store.AddChallenge(ctx, &req)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
 }
@@ -485,24 +410,20 @@ func UpdateChallenge(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var req db.Challenge
 
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(400), 400)
+	if err := render.Decode(r, &req); err != nil {
+		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
 		return
 	}
-	defer r.Body.Close()
 
 	// TODO:
 	if req.Title == "" {
-		http.Error(w, http.StatusText(400), 400)
+		render.Render(w, r, ErrInvalidRequest("Nimi on pakollinen", errors.New("title is missing")))
 		return
 	}
 
-	err = store.UpdateChallenge(ctx, &req)
+	err := store.UpdateChallenge(ctx, &req)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
 }
@@ -511,15 +432,12 @@ func DeleteChallenge(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
-
 	err = store.DeleteChallenge(ctx, id)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
 }
@@ -528,18 +446,14 @@ func CreatePerformance(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var req db.Performance
 
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(400), 400)
+	if err := render.Decode(r, &req); err != nil {
+		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
 		return
 	}
-	defer r.Body.Close()
 
-	err = store.AddPerformance(ctx, &req)
+	err := store.AddPerformance(ctx, &req)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
 }
@@ -548,15 +462,39 @@ func DeletePerformance(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
 
 	err = store.DeletePerformance(ctx, id)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, r, ErrInternal(err))
 		return
+	}
+}
+
+type ErrResponse struct {
+	HTTPStatusCode int    `json:"-"`
+	ErrorText      string `json:"error"`
+}
+
+func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	render.Status(r, e.HTTPStatusCode)
+	return nil
+}
+
+func ErrInvalidRequest(msg string, err error) render.Renderer {
+	log.Println("invalid request error:", err)
+	return &ErrResponse{
+		HTTPStatusCode: http.StatusBadRequest,
+		ErrorText:      msg,
+	}
+}
+
+func ErrInternal(err error) render.Renderer {
+	log.Println("internal error:", err)
+	return &ErrResponse{
+		HTTPStatusCode: http.StatusInternalServerError,
+		ErrorText:      http.StatusText(http.StatusInternalServerError),
 	}
 }

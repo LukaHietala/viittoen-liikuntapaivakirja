@@ -24,10 +24,11 @@ type User struct {
 }
 
 type Performance struct {
-	ID          int    `json:"id"`
-	Points      int    `json:"points"`
-	CreatedAt   string `json:"created_at"`
-	UserID      int    `json:"user_id"`
-	ChallengeID int    `json:"challenge_id"`
-	User        *User  `json:"user"`
+	ID          int        `json:"id"`
+	Points      int        `json:"points"`
+	CreatedAt   string     `json:"created_at"`
+	UserID      int        `json:"user_id"`
+	ChallengeID int        `json:"challenge_id"`
+	User        *User      `json:"user"`
+	Challenge   *Challenge `json:"challenge"`
 }

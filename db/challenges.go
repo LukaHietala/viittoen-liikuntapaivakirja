@@ -248,9 +248,21 @@ func (s *Store) DeletePerformance(ctx context.Context, id int) error {
 	}
 
 	p := new(Performance)
-	err = s.db.QueryRowContext(ctx, "SELECT id, user_id FROM performances WHERE id = ? LIMIT 1", id).Scan(&p.ID, &p.UserID)
+	err = s.db.QueryRowContext(ctx, "SELECT id, user_id, challenge_id FROM performances WHERE id = ? LIMIT 1", id).Scan(&p.ID, &p.UserID, &p.ChallengeID)
 	if err != nil {
 		return err
+	}
+
+	c := new(Challenge)
+	err = s.db.QueryRowContext(ctx, "SELECT end_date FROM challenges WHERE id = ? LIMIT 1", p.ChallengeID).Scan(&c.EndDate)
+
+	endDate, err := time.Parse(time.DateOnly, c.EndDate)
+	if err != nil {
+		return err
+	}
+
+	if endDate.Before(time.Now()) && !u.IsAdmin {
+		return fmt.Errorf("cannot delete performance if challenge has expired")
 	}
 
 	if int(userIDFloat) != p.UserID && !u.IsAdmin {

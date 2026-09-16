@@ -396,6 +396,9 @@
 			window.addChallenge = async (event) => {
 				const response = await fetch("/api/challenges", {
 					method: "POST",
+					headers: {
+						"Content-Type": "application/json"
+					},
 					body: JSON.stringify(Alpine.store("add").challenge)
 				});
 				clearAdd();
@@ -414,6 +417,9 @@
 				)[0];
 				const response = await fetch(`/api/challenges/`, {
 					method: "PATCH",
+					headers: {
+						"Content-Type": "application/json"
+					},
 					body: JSON.stringify(challenge),
 				});
 			};

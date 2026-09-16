@@ -191,6 +191,18 @@ func (s *Store) GetSelf(ctx context.Context) (*User, error) {
 		return nil, err
 	}
 
+	for _, p := range performances {
+		c := new(Challenge)
+		err := s.db.QueryRowContext(ctx,
+			"SELECT * FROM challenges WHERE id = ? LIMIT 1", p.ChallengeID).Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints, &c.StartDate, &c.EndDate, &c.UserID)
+		if err != nil {
+			rows.Close()
+			return nil, err
+		}
+
+		p.Challenge = c
+	}
+
 	u.Performances = performances
 
 	rows.Close()

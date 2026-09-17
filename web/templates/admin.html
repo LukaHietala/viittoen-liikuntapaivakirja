@@ -233,7 +233,7 @@
 				const user = Alpine.store("state").users.filter(
 					(user) => user.id == id,
 				)[0];
-				const response = await fetch(`/api/users/`, {
+                const response = await fetch(`/api/users/${id}`, {
 					method: "PATCH",
 					headers: {
 						"Content-Type": "application/json"
@@ -244,7 +244,7 @@
 
 			// Session
 			const loggedIn = async (event) => {
-				const res = await fetch("/api/session");
+				const res = await fetch("/api/session/valid");
 				const json = await res.json();
 				Alpine.store("session", {
 					loggedIn: await json.ok,

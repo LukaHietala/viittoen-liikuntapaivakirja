@@ -33,7 +33,7 @@ func (ms *MailService) Send(subject, body, recipient string) error {
 	if err != nil {
 		return err
 	}*/
-	fmt.Printf("sent email, to: %s subject: %s, body: %s", message.To(), message.Subject(), message.Text())
+	fmt.Printf("sent email, to: %s subject: %s, body: %s\n", message.To(), message.Subject(), message.Text())
 
 	return nil
 }

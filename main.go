@@ -24,8 +24,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	ms := services.NewMailService(cfg.MailgunAPIKey, cfg.MailgunDomain)
+
 	api.InitAuth(cfg.JWTSecret)
+
 	conn, err := db.Connect()
 	if err != nil {
 		log.Fatal(err)
@@ -50,7 +53,7 @@ func main() {
 
 	<-ctx.Done()
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {

@@ -415,7 +415,7 @@
 				const challenge = Alpine.store("state").challenges.filter(
 					(challenge) => challenge.id == id,
 				)[0];
-				const response = await fetch(`/api/challenges/`, {
+				const response = await fetch(`/api/challenges/${id}`, {
 					method: "PATCH",
 					headers: {
 						"Content-Type": "application/json"
@@ -441,7 +441,7 @@
 			}
 			// Session
 			const loggedIn = async (event) => {
-				const res = await fetch("/api/session");
+				const res = await fetch("/api/session/valid");
 				const json = await res.json();
 				Alpine.store('session', {
 					loggedIn: await json.ok,

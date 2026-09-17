@@ -133,7 +133,7 @@
 			);
 
 			const getProfile = async (event) => {
-				const res = await fetch("/api/self");
+				const res = await fetch("/api/session/self");
 				Alpine.store("state", {
 					self: await res.json(),
 				});
@@ -155,7 +155,7 @@
 			}
 			// Session
 			const loggedIn = async (event) => {
-				const res = await fetch("/api/session");
+				const res = await fetch("/api/session/valid");
 				const json = await res.json();
 				Alpine.store('session', {
 					loggedIn: await json.ok,

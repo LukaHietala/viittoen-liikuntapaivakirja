@@ -57,7 +57,7 @@
 						<template x-for="challenge in $store.state.challenges" >
 							<div x-data="{
 										 confirm: false,
-										 addPoints: 0
+										 addPoints: 1
 										 }">
 								<div x-show="!confirm" class="item active">
 									<div class="item-info">
@@ -74,7 +74,7 @@
 										 class="item-actions">
 										<button x-show="!confirm"
 												x-on:click="confirm = !confirm;
-															addPoints = 0">
+															addPoints = 1">
 											Lisää suoritus
 										</button>
 									</div>
@@ -171,7 +171,7 @@
 				};
 
 				const loggedIn = async (event) => {
-					const res = await fetch("/api/session");
+					const res = await fetch("/api/session/valid");
 					const json = await res.json();
 					Alpine.store('session', {
 						loggedIn: await json.ok,

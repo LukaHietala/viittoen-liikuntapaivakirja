@@ -58,13 +58,11 @@ func NewStore(db *sql.DB) *Store {
 }
 
 func Connect() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", ":memory:?_journal_mode=WAL&_foreign_keys=on")
+	// https://www.sqlite.org/pragma.html
+	db, err := sql.Open("sqlite3", "viittoen.db?_journal_mode=WAL&_foreign_keys=on&_busy_timeout=5000")
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: Remove when moving away from memory
-	db.SetMaxOpenConns(1)
 
 	if err = db.Ping(); err != nil {
 		return nil, err
@@ -73,6 +71,7 @@ func Connect() (*sql.DB, error) {
 	if _, err = db.Exec(schema); err != nil {
 		return nil, err
 	}
+
 	if _, err = db.Exec(tempData); err != nil {
 		return nil, err
 	}

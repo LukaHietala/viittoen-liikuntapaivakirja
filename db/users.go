@@ -75,7 +75,7 @@ func (s *Store) GetUserByID(id int) (*User, error) {
 	return u, nil
 }
 
-func (s *Store) AddUser(u *User, ms *services.MailService) error {
+func (s *Store) AddUser(u User, ms *services.MailService) error {
 	plain := RandomString(5)
 	hash, err := HashPassword(plain)
 	if err != nil {
@@ -98,7 +98,7 @@ func (s *Store) AddUser(u *User, ms *services.MailService) error {
 	return nil
 }
 
-func (s *Store) UpdateUser(ctx context.Context, u *User) error {
+func (s *Store) UpdateUser(ctx context.Context, id int, u User) error {
 	token, claims, _ := jwtauth.FromContext(ctx)
 
 	if token == nil || jwt.Validate(token) != nil {
@@ -115,7 +115,7 @@ func (s *Store) UpdateUser(ctx context.Context, u *User) error {
 	_, err := s.db.ExecContext(ctx, `
 	UPDATE users
 	SET name = ?, email = ?, is_admin = ?
-	WHERE id = ?`, u.Name, u.Email, u.IsAdmin, u.ID)
+	WHERE id = ?`, u.Name, u.Email, u.IsAdmin, id)
 
 	if err != nil {
 		return err

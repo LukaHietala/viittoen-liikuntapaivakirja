@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -16,8 +17,8 @@ func (s *Store) GetChallengeByID(ctx context.Context, id int) (*Challenge, error
 		"SELECT * FROM challenges WHERE id = ? LIMIT 1", id).
 		Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints, &c.StartDate, &c.EndDate, &c.UserID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, err
 		}
 		return nil, err
 	}
@@ -44,12 +45,12 @@ func (s *Store) ListChallenges(ctx context.Context, active bool) ([]*Challenge, 
 			var err error
 			startDate, err = time.Parse(time.DateOnly, c.StartDate)
 			if err != nil {
-				fmt.Printf("unable to parse date")
+				fmt.Printf("unable to parse date, skipping")
 				continue
 			}
 			endDate, err = time.Parse(time.DateOnly, c.EndDate)
 			if err != nil {
-				fmt.Printf("unable to parse date")
+				fmt.Printf("unable to parse date, skipping")
 				continue
 			}
 			if TimeIsBetween(time.Now(), startDate, endDate) {
@@ -114,7 +115,7 @@ func (s *Store) ListChallenges(ctx context.Context, active bool) ([]*Challenge, 
 	return challenges, nil
 }
 
-func (s *Store) AddChallenge(ctx context.Context, c *Challenge) error {
+func (s *Store) AddChallenge(ctx context.Context, c Challenge) error {
 	_, claims, _ := jwtauth.FromContext(ctx)
 	userIDFloat, ok := claims["user_id"].(float64)
 	if !ok {
@@ -172,7 +173,7 @@ func (s *Store) DeleteChallenge(ctx context.Context, id int) error {
 	return nil
 }
 
-func (s *Store) UpdateChallenge(ctx context.Context, c *Challenge) error {
+func (s *Store) UpdateChallenge(ctx context.Context, id int, c Challenge) error {
 	token, claims, _ := jwtauth.FromContext(ctx)
 
 	if token == nil || jwt.Validate(token) != nil {
@@ -190,7 +191,7 @@ func (s *Store) UpdateChallenge(ctx context.Context, c *Challenge) error {
 	}
 
 	ch := new(Challenge)
-	err = s.db.QueryRowContext(ctx, "SELECT id, user_id FROM challenges WHERE id = ? LIMIT 1", c.ID).Scan(&ch.ID, &ch.UserID)
+	err = s.db.QueryRowContext(ctx, "SELECT id, user_id FROM challenges WHERE id = ? LIMIT 1", id).Scan(&ch.ID, &ch.UserID)
 	if err != nil {
 		return err
 	}
@@ -205,73 +206,7 @@ func (s *Store) UpdateChallenge(ctx context.Context, c *Challenge) error {
 	_, err = s.db.ExecContext(ctx, `
 		UPDATE challenges
 		SET title = ?, description = ?, unit = ?, goal_points = ?, start_date = ?, end_date = ?
-		WHERE id = ?`, c.Title, c.Description, c.Unit, c.GoalPoints, c.StartDate, c.EndDate, c.ID)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Store) AddPerformance(ctx context.Context, p *Performance) error {
-	_, claims, _ := jwtauth.FromContext(ctx)
-	userIDFloat, ok := claims["user_id"].(float64)
-	if !ok {
-		return fmt.Errorf("invalid user id in session")
-	}
-
-	_, err := s.db.ExecContext(ctx, `INSERT INTO performances(points, user_id, challenge_id)
-					VALUES (?,?,?)`, p.Points, int(userIDFloat), p.ChallengeID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Store) DeletePerformance(ctx context.Context, id int) error {
-	token, claims, _ := jwtauth.FromContext(ctx)
-
-	if token == nil || jwt.Validate(token) != nil {
-		return fmt.Errorf("unable to validate user token")
-	}
-	userIDFloat, ok := claims["user_id"].(float64)
-	if !ok {
-		return fmt.Errorf("unable to convert user_id to float")
-	}
-
-	u := new(User)
-	err := s.db.QueryRowContext(ctx, "SELECT id, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.IsAdmin)
-	if err != nil {
-		return err
-	}
-
-	p := new(Performance)
-	err = s.db.QueryRowContext(ctx, "SELECT id, user_id, challenge_id FROM performances WHERE id = ? LIMIT 1", id).Scan(&p.ID, &p.UserID, &p.ChallengeID)
-	if err != nil {
-		return err
-	}
-
-	c := new(Challenge)
-	err = s.db.QueryRowContext(ctx, "SELECT end_date FROM challenges WHERE id = ? LIMIT 1", p.ChallengeID).Scan(&c.EndDate)
-
-	endDate, err := time.Parse(time.DateOnly, c.EndDate)
-	if err != nil {
-		return err
-	}
-
-	if endDate.Before(time.Now()) && !u.IsAdmin {
-		return fmt.Errorf("cannot delete performance if challenge has expired")
-	}
-
-	if int(userIDFloat) != p.UserID && !u.IsAdmin {
-		return fmt.Errorf("no permisson to delete performance")
-	}
-
-	_, err = s.db.ExecContext(ctx, `
-		DELETE FROM performances
-		WHERE id = ?`, id)
+		WHERE id = ?`, c.Title, c.Description, c.Unit, c.GoalPoints, c.StartDate, c.EndDate, id)
 
 	if err != nil {
 		return err

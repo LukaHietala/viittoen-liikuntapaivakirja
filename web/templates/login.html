@@ -47,7 +47,7 @@
 					});
 					if (!response.ok) {
 						const json = await response.json();
-						alert(json.message);
+						alert(json.error);
 					} else {
 						window.location.replace("/");
 					}

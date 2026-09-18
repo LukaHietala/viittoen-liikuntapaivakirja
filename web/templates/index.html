@@ -100,10 +100,9 @@
 											Peruuta
 										</button>
 										<button x-show="confirm"
-												:disabled="parseInt(addPoints)
-														   == NaN"
+												:disabled="addPoints == null"
 												x-on:click="addPerformance($event,
-															addPoints,
+															Math.round(addPoints),
 															challenge.id);
 															confirm = false">
 											Vahvista
@@ -165,7 +164,7 @@
 						body: JSON.stringify({
 							points: points,
 							challenge_id: challenge_id
-						}) 
+						})
 					});
 					Alpine.store('state').challenges = await getChallenges();
 				};

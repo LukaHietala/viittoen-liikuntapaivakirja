@@ -86,8 +86,12 @@
 														$event,
 														performance.id)"
 											class="secondary-btn icon-btn"
-											x-show="Date.parse(performance.challenge.end_date)
-													> Date.now()">
+											:disabled="!(Date.parse(performance.challenge.end_date)
+													> Date.now())"
+                                            :title="!(Date.parse(performance.challenge.end_date)
+													> Date.now()) ?
+												'Et voi poistaa vanhentuneen haasteen suorituksia' : ''"
+                                            >
                                         <img src="/static/can.svg" alt="Poista" />
                                     </button>
                                 </div>
@@ -117,7 +121,7 @@
 		document.addEventListener("alpine:init", async () => {
 			Alpine.store('session', {
 				loggedIn: false,
-				name: "Jorma"
+				name: "Ladataan"
 			});
 			
 			Alpine.store("state", {
@@ -128,8 +132,7 @@
 
 			window.sumPerformances = (performances) => (
 				(performances == null ) ?
-					0
-					: performances.reduce((sum, x) => sum + x.points, 0)
+					0 : performances.reduce((sum, x) => sum + x.points, 0)
 			);
 
 			const getProfile = async (event) => {

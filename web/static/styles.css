@@ -201,6 +201,11 @@ button:hover {
     padding: 9px;
 }
 
+.icon-btn:disabled {
+    background-color: white !important;
+    opacity: .4 !important;
+}
+
 input {
     padding: 6px 10px;
     margin: 4px 0;

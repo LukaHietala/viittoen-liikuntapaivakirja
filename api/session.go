@@ -21,8 +21,7 @@ func (rs sessionResource) Routes() chi.Router {
 }
 
 func (rs sessionResource) Self(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	user, err := store.GetSelf(ctx)
+	user, err := store.GetSelf(r.Context())
 	if err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return

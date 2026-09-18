@@ -54,7 +54,6 @@ func (rs performancesResource) PerformanceCtx(next http.Handler) http.Handler {
 }
 
 func (rs performancesResource) Create(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	var req db.Performance
 
 	if err := render.Decode(r, &req); err != nil {
@@ -62,8 +61,7 @@ func (rs performancesResource) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := store.AddPerformance(ctx, &req)
-	if err != nil {
+	if err := store.AddPerformance(r.Context(), &req); err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
 	}
@@ -74,11 +72,9 @@ func (rs performancesResource) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rs performancesResource) Delete(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	performance := r.Context().Value("performance").(*db.Performance)
 
-	err := store.DeletePerformance(ctx, performance.ID)
-	if err != nil {
+	if err := store.DeletePerformance(r.Context(), performance.ID); err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
 	}

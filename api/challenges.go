@@ -70,23 +70,20 @@ func (rs challengesResource) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rs challengesResource) Create(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	var req db.Challenge
+	var challenge db.Challenge
 
-	if err := render.Decode(r, &req); err != nil {
+	if err := render.Decode(r, &challenge); err != nil {
 		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
 		return
 	}
 
 	// TODO:
-	if req.Title == "" {
+	if challenge.Title == "" {
 		render.Render(w, r, ErrInvalidRequest("Nimi on pakollinen", errors.New("no title")))
 		return
 	}
 
-	challenge := req
-	err := store.AddChallenge(ctx, challenge)
-	if err != nil {
+	if err := store.AddChallenge(r.Context(), challenge); err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
 	}
@@ -111,7 +108,6 @@ func (rs challengesResource) GetActive(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rs challengesResource) Update(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	challenge := r.Context().Value("challenge").(*db.Challenge)
 
 	var req db.Challenge
@@ -128,18 +124,17 @@ func (rs challengesResource) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	challenge = &req
-	err := store.UpdateChallenge(ctx, challenge.ID, req)
-	if err != nil {
+
+	if err := store.UpdateChallenge(r.Context(), challenge.ID, req); err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
 	}
 }
 
 func (rs challengesResource) Delete(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	challenge := r.Context().Value("challenge").(*db.Challenge)
 
-	err := store.DeleteChallenge(ctx, challenge.ID)
+	err := store.DeleteChallenge(r.Context(), challenge.ID)
 	if err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return

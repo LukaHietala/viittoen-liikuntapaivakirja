@@ -69,7 +69,7 @@
 							<input
 								type="number"
 								name="points"
-                                min="0"
+                                min="1"
 								x-model.number="$store.add.challenge.goal_points"/>
 							<br/>
 							<label for="unit">Yksikkö:</label><br />
@@ -95,21 +95,22 @@
 						<div style="padding: 15px; border-top: 1px solid var(--border)">
 							<button
 								type="submit"
-								:disabled="$store.add.challenge.title.length ==
-										   0 ||
-										   $store.add.challenge.description == null ||
-										   $store.add.challenge.description.length == 0 ||
-										   parseInt($store.add.challenge.points) ==
-										   NaN ||
-										   $store.add.challenge.goal_points == null ||
-										   $store.add.challenge.goal_points.length ==
-										   0 ||
-										   $store.add.challenge.unit == null ||
-										   $store.add.challenge.unit.length == 0 ||
-										   $store.add.challenge.start_date == null ||
-										   $store.add.challenge.end_date == null ||
-										   Date.parse($store.add.challenge.start_date)
-										   > Date.parse($store.add.challenge.end_date)"
+								:disabled=
+								"$store.add.challenge.title.length == 0 ||
+								 $store.add.challenge.description == null ||
+								 $store.add.challenge.description.length == 0 ||
+								 parseInt($store.add.challenge.goal_points) ==
+								 NaN ||
+								 parseInt($store.add.challenge.goal_points) < 1 ||
+								 badInt($store.add.challenge.goal_points) ||
+								 $store.add.challenge.goal_points == null ||
+								 $store.add.challenge.goal_points.length == 0 ||
+								 $store.add.challenge.unit == null ||
+								 $store.add.challenge.unit.length == 0 ||
+								 $store.add.challenge.start_date == null ||
+								 $store.add.challenge.end_date == null ||
+								 Date.parse($store.add.challenge.start_date) >
+								 Date.parse($store.add.challenge.end_date)"
 								x-on:click="addChallenge($event);
 											adding = false">
 								Lisää haaste
@@ -171,8 +172,8 @@
 														challenge.id;
 														showPerformances = false"
 											class="secondary-btn icon-btn"
-											x-show="$store.session.admin ||
-													$store.session.id == challenge.user_id">
+                                            :disabled="!($store.session.admin ||
+													$store.session.id == challenge.user_id)">
 										<img src="/static/pen.svg" alt="Muokkaa" />
 									</button>
 								</div>
@@ -272,21 +273,21 @@
 												var(--border)"
 										 x-data="{ confirm: false }">
 										<button 
-											:disabled="challenge.title.length == 0
-													   ||
-													   challenge.description == null ||
-													   challenge.description.length == 0 ||
-													   parseInt(challenge.goal_points) ==
-													   NaN ||
-													   challenge.goal_points == null ||
-													   challenge.goal_points.length
-													   == 0 ||
-													   challenge.unit == null ||
-													   challenge.unit.length == 0 ||
-													   challenge.start_date == null ||
-													   challenge.end_date == null ||
-													   Date.parse(challenge.start_date)
-													   > Date.parse(challenge.end_date)"
+											:disabled=
+											"challenge.title.length == 0 ||
+											 challenge.description == null ||
+											 challenge.description.length == 0 ||
+											 parseInt(challenge.goal_points) == NaN ||
+											 parseInt(challenge.goal_points) < 1 ||
+											 badInt(challenge.goal_points) ||
+											 challenge.goal_points == null ||
+											 challenge.goal_points.length == 0 ||
+											 challenge.unit == null ||
+											 challenge.unit.length == 0 ||
+											 challenge.start_date == null ||
+											 challenge.end_date == null ||
+											 Date.parse(challenge.start_date) >
+											 Date.parse(challenge.end_date)"
 											x-show="!confirm"
 											x-on:click="$store.state.editing_id = null;
 														updateChallenge($event, challenge.id)">
@@ -333,7 +334,7 @@
 				challenge: {
 					title: "",
 					description: "",
-					goal_points: 0,
+					goal_points: 1,
 					unit: "",
 					start_date: null,
 					end_date: null,
@@ -386,13 +387,16 @@
 					challenge: {
 						title: "",
 						description: "",
-						goal_points: 0,
+						goal_points: 1,
 						unit: "",
 						start_date: null,
 						end_date: null
 					}
 				});
 			};
+
+			window.badInt = (str) => !Number.isInteger(parseFloat(str));
+			
 			window.addChallenge = async (event) => {
 				const response = await fetch("/api/challenges", {
 					method: "POST",

@@ -91,7 +91,7 @@ func Serve(contentFS fs.FS, ms *services.MailService, s *db.Store) http.Handler 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFileFS(w, r, templateFS, "index.html")
 	})
-
+	
 	r.Route("/api", func(r chi.Router) {
 		r.Mount("/challenges", challengesResource{}.Routes())
 		r.Mount("/users", usersResource{}.Routes(ms))

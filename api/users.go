@@ -68,21 +68,18 @@ func (rs usersResource) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rs usersResource) Create(w http.ResponseWriter, r *http.Request, ms *services.MailService) {
-	var req db.User
-	if err := render.Decode(r, &req); err != nil {
+	var user db.User
+	if err := render.Decode(r, &user); err != nil {
 		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
 		return
 	}
 
-	if req.Name == "" || req.Email == "" {
+	if user.Name == "" || user.Email == "" {
 		render.Render(w, r, ErrInvalidRequest("Nimi ja sähköposti ovat pakollisia", errors.New("no name or password")))
 		return
 	}
 
-	user := req
-
-	err := store.AddUser(user, ms)
-	if err != nil {
+	if err := store.AddUser(user, ms); err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
 	}
@@ -92,9 +89,6 @@ func (rs usersResource) Create(w http.ResponseWriter, r *http.Request, ms *servi
 }
 
 func (rs usersResource) Update(w http.ResponseWriter, r *http.Request) {
-	var err error
-
-	ctx := r.Context()
 	user := r.Context().Value("user").(*db.User)
 
 	var req db.User
@@ -109,8 +103,7 @@ func (rs usersResource) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user = &req
-	err = store.UpdateUser(ctx, user.ID, req)
-	if err != nil {
+	if err := store.UpdateUser(r.Context(), user.ID, req); err != nil {
 		render.Render(w, r, ErrInternal(err))
 	}
 
@@ -119,10 +112,9 @@ func (rs usersResource) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rs usersResource) Delete(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	user := r.Context().Value("user").(*db.User)
 
-	err := store.DeleteUser(ctx, user.ID)
+	err := store.DeleteUser(r.Context(), user.ID)
 	if err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/mail"
 	"strconv"
 
 	"github.com/LukaHietala/viittoen-liikuntapaivakirja/db"
@@ -76,6 +77,11 @@ func (rs usersResource) Create(w http.ResponseWriter, r *http.Request, ms *servi
 
 	if user.Name == "" || user.Email == "" {
 		render.Render(w, r, ErrInvalidRequest("Nimi ja sähköposti ovat pakollisia", errors.New("no name or password")))
+		return
+	}
+
+	if _, err := mail.ParseAddress(user.Email); err != nil {
+		render.Render(w, r, ErrInvalidRequest("Sähköposti ei ole oikeassa muodossa", err))
 		return
 	}
 

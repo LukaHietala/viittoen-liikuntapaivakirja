@@ -90,7 +90,7 @@ func (s *Store) AddUser(u User, ms *services.MailService) error {
 		return err
 	}
 	// TODO:template
-	err = ms.Send("Käyttäjätunnukset", plain, u.Email)
+	err = ms.Send("Käyttäjätunnukset", fmt.Sprintf("Salasana: %s", plain), u.Email)
 	if err != nil {
 		return err
 	}
@@ -163,6 +163,9 @@ func (s *Store) GetSelf(ctx context.Context) (*User, error) {
 	u := new(User)
 	err := s.db.QueryRowContext(ctx, "SELECT id, name, email, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 	rows, err := s.db.QueryContext(ctx, `
@@ -285,4 +288,14 @@ func (s *Store) FinishResetPassword(token jwt.Token, newPassword string) error {
 	}
 
 	return nil
+}
+
+func (s *Store) UserCount() (int, error) {
+	var count int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }

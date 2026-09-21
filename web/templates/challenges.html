@@ -7,6 +7,7 @@
 			defer
 			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js">
 		</script>
+		<script src="/static/utils.js"></script>
 		<link rel="stylesheet" href="static/styles.css" />
 		<title>Muokkaa haasteita</title>
 	</head>
@@ -407,6 +408,7 @@
 				});
 				clearAdd();
 				Alpine.store("state").challenges = await getChallenges();
+				toast("Lisättiin haaste");
 			};
 			// Challenges
 			window.deleteChallenge = async (event, id) => {
@@ -414,6 +416,7 @@
 					method: "DELETE",
 				});
 				Alpine.store("state").challenges = await getChallenges();
+				toast("Poistettiin haaste");
 			};
 			window.updateChallenge = async (event, id) => {
 				const challenge = Alpine.store("state").challenges.filter(
@@ -442,6 +445,7 @@
 				Alpine.store("state", {
 					challenges: await getChallenges()
 				});
+				toast("Poistettiin suoritus");
 			}
 			// Session
 			const loggedIn = async (event) => {

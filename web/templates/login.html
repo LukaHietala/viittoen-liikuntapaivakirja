@@ -43,7 +43,10 @@
 						headers: {
 							"Content-Type": "application/json"
 						},
-                        body: JSON.stringify({ name: Alpine.store("state").name, password: Alpine.store("state").password }),
+                        body: JSON.stringify({
+							name: Alpine.store("state").name,
+							password: Alpine.store("state").password
+						}),
 					});
 					if (!response.ok) {
 						const json = await response.json();

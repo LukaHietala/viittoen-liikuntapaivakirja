@@ -79,6 +79,17 @@ func Serve(contentFS fs.FS, ms *services.MailService, s *db.Store) http.Handler 
 		})
 	})
 
+	r.Group(func(r chi.Router) {
+		r.Route("/onboarding", func(r chi.Router) {
+			r.Use(OnboardingRedirector)
+			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				http.ServeFileFS(w, r, templateFS, "onboarding.html")
+			})
+			// Post to /api/users
+		})
+
+	})
+
 	// Admin only pages
 	r.Group(func(r chi.Router) {
 		r.Use(AdminOnly)

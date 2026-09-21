@@ -23,6 +23,13 @@ func LoggedInRedirector(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, _, _ := jwtauth.FromContext(r.Context())
 
+		count, err := store.UserCount()
+
+		if count == 0 && err == nil {
+			http.Redirect(w, r, "/onboarding", 302)
+			return
+		}
+
 		if token != nil && jwt.Validate(token) == nil {
 			http.Redirect(w, r, "/profile", 302)
 		}
@@ -51,6 +58,14 @@ func UnloggedInRedirector(next http.Handler) http.Handler {
 
 func AdminOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		count, err := store.UserCount()
+
+		// TODO: Make secure
+		if count == 0 && err == nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		token, claims, _ := jwtauth.FromContext(r.Context())
 
 		if token == nil || jwt.Validate(token) != nil {
@@ -107,6 +122,19 @@ func SessionOnly(next http.Handler) http.Handler {
 		if user == nil {
 			ResetJWTCookies(w)
 			http.Error(w, http.StatusText(403), 403)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func OnboardingRedirector(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		count, _ := store.UserCount()
+
+		if count > 0 {
+			http.Redirect(w, r, "/", 302)
 			return
 		}
 

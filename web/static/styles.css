@@ -218,3 +218,49 @@ input {
 input:focus {
     border: 1px solid var(--primary);
 }
+
+
+.toast {
+	animation-name: pop-in, pop-out;
+	animation-duration: 500ms, 500ms;
+	animation-delay: 0ms, 2000ms;
+	animation-timing-function: ease-in-out, ease-in;
+	animation-iteration-count: 1, 1;
+	position: fixed;
+	bottom: 20px;
+	margin-left: auto;
+	margin-right: auto;
+	left: 0;
+	right: 0;
+    font-size: 1.1em;
+	text-align: center;
+    background-color: white;
+    width: 300px;
+    padding: 15px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+@keyframes pop-in {
+	from {
+		opacity: 0;
+		bottom: 0;
+	}
+
+	to {
+		opacity: 1;
+		bottom: 20px;
+	}
+}
+
+@keyframes pop-out {
+	from {
+		opacity: 1;
+		bottom: 20px;
+	}
+
+	to {
+		opacity: 0;
+		bottom: 0px;
+	}
+}

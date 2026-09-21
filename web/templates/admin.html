@@ -7,6 +7,7 @@
 			defer
 			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js">
 		</script>
+		<script src="/static/utils.js"></script>
 		<link rel="stylesheet" href="static/styles.css" />
 		<title>Ohjauspaneeli</title>
 	</head>
@@ -219,8 +220,15 @@
 						email: Alpine.store("add").user.email,
 					}),
 				});
-				clearAdd();
-				Alpine.store("state").users = await getUsers();
+				if (response.ok) {
+					const name = Alpine.store("add").user.name
+					clearAdd();
+					Alpine.store("state").users = await getUsers();
+					toast(`Lisättiin käyttäjä ${name}`);
+				} else {
+					const json = await response.json();
+					alert(json.error);
+				}
 			};
 			// Users
 			window.deleteUser = async (event, id) => {
@@ -228,6 +236,7 @@
 					method: "DELETE",
 				});
 				Alpine.store("state").users = await getUsers();
+				toast("Poistettiin käyttäjä");
 			};
 			window.updateUser = async (event, id) => {
 				const user = Alpine.store("state").users.filter(
@@ -240,6 +249,7 @@
 					},
 					body: JSON.stringify(user),
 				});
+				toast("Päivitettiin käyttäjää");
 			};
 
 			// Session

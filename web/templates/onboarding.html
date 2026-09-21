@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Onboarding</title>
+		<link rel="stylesheet" href="static/styles.css" />
+		<script
+			defer
+			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+		></script>
+	</head>
+	<body>
+		<main>
+			<h2>Luo ylläpitäjän tunnukset</h2>
+			<p>
+				Sivulla pitää olla vähintään yksi ylläpitäjä käyttäjä, joka
+				hallinnoi sivua. Kun olet täyttänyt tiedot sähköpostiisi tulee
+				oikeat tunnukset.
+			</p>
+			<section x-data="">
+				<div style="padding: 15px">
+					<label>Nimi:</label><br />
+					<input
+						type="text"
+						name="name"
+						x-model="$store.state.name"/>
+					<br/>
+					<label>Sähköposti:</label><br/>
+					<input
+						type="text"
+						name="email"
+						x-model="$store.state.email"/>
+					<br/>
+				</div>
+                <div style="padding: 15px; border-top: 1px solid var(--border)">
+                    <button
+                        type="submit"
+                        x-on:click="createUser($event);">
+                        Lisää käyttäjä
+                    </button>
+                </div>
+			</section>
+		</main>
+	</body>
+	<script type="text/javascript">
+		document.addEventListener("alpine:init", async () => {
+			Alpine.store("state", {
+				name: "",
+				email: "",
+			});
+
+			window.createUser = async (event) => {
+				try {
+					const response = await fetch("/api/users", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({
+							name: Alpine.store("state").name,
+							email: Alpine.store("state").email,
+							is_admin: true
+						}),
+					});
+					if (!response.ok) {
+						const json = await response.json();
+						alert(json.error);
+					} else {
+						window.location.replace("/");
+					}
+				} catch (e) {
+					console.error(e.message);
+				}
+			};
+		});
+	</script>
+</html>

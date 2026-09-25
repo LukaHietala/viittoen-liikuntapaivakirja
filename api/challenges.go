@@ -41,11 +41,13 @@ func (rs challengesResource) ChallengeCtx(next http.Handler) http.Handler {
 		challengeIDStr := chi.URLParam(r, "id")
 		if challengeIDStr == "" {
 			render.Render(w, r, ErrNotFound())
+			return
 		}
 
 		challengeID, err := strconv.Atoi(challengeIDStr)
 		if err != nil {
 			render.Render(w, r, ErrInternal(err))
+			return
 		}
 
 		challenge, err = store.GetChallengeByID(rCtx, challengeID)

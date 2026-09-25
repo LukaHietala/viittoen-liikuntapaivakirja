@@ -40,7 +40,7 @@ func LoggedInRedirector(next http.Handler) http.Handler {
 
 func UnloggedInRedirector(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token, _, err := jwtauth.FromContext(r.Context())
+		token, claims, err := jwtauth.FromContext(r.Context())
 
 		if token == nil || err != nil {
 			http.Redirect(w, r, "/login", 302)
@@ -51,6 +51,27 @@ func UnloggedInRedirector(next http.Handler) http.Handler {
 			http.Redirect(w, r, "/login", 302)
 			return
 		}
+
+		userIDFloat, ok := claims["user_id"].(float64)
+		if !ok {
+			http.Redirect(w, r, "/login", 302)
+			return
+		}
+
+		user, err := store.GetUserByID(int(userIDFloat))
+
+		if err != nil {
+			ResetJWTCookies(w)
+			http.Redirect(w, r, "/login", 302)
+			return
+		}
+
+		if user == nil {
+			ResetJWTCookies(w)
+			http.Redirect(w, r, "/login", 302)
+			return
+		}
+
 
 		next.ServeHTTP(w, r)
 	})

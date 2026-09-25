@@ -1,7 +1,9 @@
 package services
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	mailgun "github.com/mailgun/mailgun-go/v5"
 )
@@ -26,13 +28,13 @@ func (ms *MailService) Send(subject, body, recipient string) error {
 	sender := "<postmaster@sandbox7d3f343edb8f4122af4777d52f9b6aa5.mailgun.org>"
 	message := mailgun.NewMessage(ms.domain, sender, subject, body, recipient)
 
-	/*ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	_, err := ms.client.Send(ctx, message)
 	if err != nil {
 		return err
-	}*/
+	}
 	fmt.Printf("sent email, to: %s subject: %s, body: %s\n", message.To(), message.Subject(), message.Text())
 
 	return nil

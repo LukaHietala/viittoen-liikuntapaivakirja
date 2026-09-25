@@ -35,11 +35,13 @@ func (rs performancesResource) PerformanceCtx(next http.Handler) http.Handler {
 		performanceIDStr := chi.URLParam(r, "id")
 		if performanceIDStr == "" {
 			render.Render(w, r, ErrNotFound())
+			return
 		}
 
 		performanceID, err := strconv.Atoi(performanceIDStr)
 		if err != nil {
 			render.Render(w, r, ErrInternal(err))
+			return
 		}
 
 		performance, err = store.GetPerformanceByID(rCtx, performanceID)

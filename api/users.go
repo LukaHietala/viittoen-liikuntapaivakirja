@@ -41,11 +41,13 @@ func (rs usersResource) UserCtx(next http.Handler) http.Handler {
 		userIDStr := chi.URLParam(r, "id")
 		if userIDStr == "" {
 			render.Render(w, r, ErrNotFound())
+			return
 		}
 
 		userID, err := strconv.Atoi(userIDStr)
 		if err != nil {
 			render.Render(w, r, ErrInternal(err))
+			return
 		}
 
 		user, err = store.GetUserByID(userID)

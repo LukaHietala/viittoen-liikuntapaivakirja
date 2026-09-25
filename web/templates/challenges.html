@@ -141,29 +141,41 @@
 								:class="isActive(challenge.start_date,
 										challenge.end_date)
 										? 'item active' :
-										'item'">
+										'item'"
+								>
 								<div class="item-info">
-									<strong x-text="challenge.title"></strong>
-									<span x-text="`- Tavoite: ${challenge.pot} /`"></span>
-									<span x-text="challenge.goal_points"></span>
-									-
-									<strong>Tila: </strong>
-									<span
-										x-show="isActive(challenge.start_date,
-												challenge.end_date)">
-										Aktiivinen
-									</span>
-									<span
-										x-show="!isActive(challenge.start_date,
-												challenge.end_date)">
-										Ei aktiivinen
-									</span>
-									<br />
-									<strong>Ajanjakso: </strong>
-									<span
-										x-text="` ${suomiDate(challenge.start_date)}
-												- ${suomiDate(challenge.end_date)}`">
-									</span>
+									<div :style="`height: 40px;
+												 width: 10px;
+												 background-color:${challenge.user.color};
+												 display:inline-block;
+												 margin-right: 10px;
+												 margin-top: auto;
+												 margin-bottom: auto;
+												 border-radius: 3.5px`">
+									</div>
+                                    <div>
+                                        <strong x-text="challenge.title"></strong>
+                                        <span x-text="`- Tavoite: ${challenge.pot} /`"></span>
+                                        <span x-text="challenge.goal_points"></span>
+                                        -
+                                        <strong>Tila: </strong>
+                                        <span
+                                            x-show="isActive(challenge.start_date,
+                                                    challenge.end_date)">
+                                            Aktiivinen
+                                        </span>
+                                        <span
+                                            x-show="!isActive(challenge.start_date,
+                                                    challenge.end_date)">
+                                            Ei aktiivinen
+                                        </span>
+                                        <br />
+                                        <strong>Ajanjakso: </strong>
+                                        <span
+                                            x-text="` ${suomiDate(challenge.start_date)}
+                                                    - ${suomiDate(challenge.end_date)}`">
+                                        </span>
+                                    </div>
 								</div>
 								<div class="item-actions">
 									<button x-on:click="showPerformances = !showPerformances">
@@ -322,6 +334,9 @@
                 </section>
             </div>
 		</main>
+		<img src="/static/ok-kamu.png"
+			 alt="Tyytyväinen kamu istahtaa"
+			 class="kamu"/>
 	</body>
 	<script>
 		document.addEventListener("alpine:init", async () => {

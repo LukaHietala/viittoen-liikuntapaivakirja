@@ -59,7 +59,7 @@ func (rs performancesResource) Create(w http.ResponseWriter, r *http.Request) {
 	var req db.Performance
 
 	if err := render.Decode(r, &req); err != nil {
-		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 

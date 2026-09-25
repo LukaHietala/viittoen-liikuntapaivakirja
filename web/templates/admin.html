@@ -14,7 +14,7 @@
 	<body x-data="{ showNav: false }">
 		<main>
             <!-- Navbar -->
-            <nav class="navbar"> 
+            <nav class="navbar">
                 <div class="navbar-row">
                     <div class="desktop">
                         <a href="/" class="btn-link">Etusivu</a>
@@ -54,13 +54,17 @@
 				<section x-data="{ adding: false }">
 					<div x-show="adding">
 						<div style="padding: 15px">
-							<label for="name">Käyttäjän nimi:</label><br />
+							<label for="name">Käyttäjän nimi:</label><br/>
 							<input type="text" name="name"
-								   x-model="$store.add.user.name" />
+								   x-model="$store.add.user.name"/>
 							<br/>
-							<label for="email">Sähköposti:</label><br />
+							<label for="email">Sähköposti:</label><br/>
 							<input type="email" name="email"
-								   x-model="$store.add.user.email" />
+								   x-model="$store.add.user.email"/>
+							<br/>
+							<label for="color">Väri:</label><br/>
+							<input type="color" name="color"
+								   x-model="$store.add.user.color"/>
 						</div>
 						<div style="padding: 15px; border-top: 1px solid var(--border)">
 							<button
@@ -97,21 +101,25 @@
 									<strong x-text="user.name"></strong>
 									<span class="badge" x-show="user.is_admin">Ylläpitäjä</span>
 								</div>
-                                <div class="item-actions">
-                                    <button x-on:click="$store.state.editing_user_id = user.id">
-                                        Muokkaa
-                                    </button>
-                                </div>
+								<div class="item-actions">
+									<button x-on:click="$store.state.editing_user_id = user.id">
+										Muokkaa
+									</button>
+								</div>
 							</div>
 						</div>
 						<!-- EDITING -->
 						<template x-if="$store.state.editing_user_id == user.id">
 							<section>
 								<div style="padding: 15px">
-									<label for="name">Nimi:</label><br />
-									<input type="text" x-model="user.name" type="text" /><br />
-									<label for="email">Sähköposti</label><br />
-									<input type="email" x-model="user.email" /><br />
+									<label for="name">Nimi:</label><br/>
+									<input type="text" x-model="user.name" type="text" /><br/>
+									<label for="email">Sähköposti</label><br/>
+									<input type="email"
+										   x-model="user.email"/><br/>
+									<label for="color">Väri:</label><br/>
+									<input type="color" name="color"
+										   x-model="user.color"/><br/>
 									<label>Onko ylläpitäjä:</label>
 									<input
 										x-model="user.is_admin"
@@ -157,6 +165,9 @@
 				</template>
 			</div>
 		</main>
+		<img src="/static/innostunut-kamu.png"
+			 alt="Innostunut kamu vilkuttaa"
+			 class="kamu"/>
 	</body>
 	<script>
 		document.addEventListener("alpine:init", async () => {

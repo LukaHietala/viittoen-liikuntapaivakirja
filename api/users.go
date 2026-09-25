@@ -2,10 +2,9 @@ package api
 
 import (
 	"context"
-	"errors"
 	"net/http"
-	"net/mail"
 	"strconv"
+	"strings"
 
 	"github.com/LukaHietala/viittoen-liikuntapaivakirja/db"
 	"github.com/LukaHietala/viittoen-liikuntapaivakirja/services"
@@ -73,19 +72,17 @@ func (rs usersResource) List(w http.ResponseWriter, r *http.Request) {
 func (rs usersResource) Create(w http.ResponseWriter, r *http.Request, ms *services.MailService) {
 	var user db.User
 	if err := render.Decode(r, &user); err != nil {
-		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 
-	if user.Name == "" || user.Email == "" {
-		render.Render(w, r, ErrInvalidRequest("Nimi ja sähköposti ovat pakollisia", errors.New("no name or password")))
+	if err := user.Validate(); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 
-	if _, err := mail.ParseAddress(user.Email); err != nil {
-		render.Render(w, r, ErrInvalidRequest("Sähköposti ei ole oikeassa muodossa", err))
-		return
-	}
+	user.Name = strings.TrimSpace(user.Name)
+	user.Email = strings.TrimSpace(user.Email)
 
 	if err := store.AddUser(user, ms); err != nil {
 		render.Render(w, r, ErrInternal(err))
@@ -101,14 +98,17 @@ func (rs usersResource) Update(w http.ResponseWriter, r *http.Request) {
 
 	var req db.User
 	if err := render.Decode(r, &req); err != nil {
-		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 
-	if req.Name == "" {
-		render.Render(w, r, ErrInvalidRequest("Nimi puuttuu", errors.New("name is missing")))
+	if err := req.Validate(); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
+
+	user.Name = strings.TrimSpace(user.Name)
+	user.Email = strings.TrimSpace(user.Email)
 
 	user = &req
 	if err := store.UpdateUser(r.Context(), user.ID, req); err != nil {

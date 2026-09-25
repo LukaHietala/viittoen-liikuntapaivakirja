@@ -11,7 +11,7 @@ import (
 )
 
 func (s *Store) ListUsers() ([]*User, error) {
-	rows, err := s.db.Query(`SELECT id, name, email, is_admin FROM users`)
+	rows, err := s.db.Query(`SELECT id, name, email, is_admin, color FROM users`)
 	if err != nil {
 		return nil, err
 	}
@@ -20,7 +20,7 @@ func (s *Store) ListUsers() ([]*User, error) {
 	users := make([]*User, 0)
 	for rows.Next() {
 		u := new(User)
-		err := rows.Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin)
+		err := rows.Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin, &u.Color)
 		if err != nil {
 			return nil, err
 		}
@@ -65,7 +65,7 @@ func (s *Store) ListUsers() ([]*User, error) {
 
 func (s *Store) GetUserByID(id int) (*User, error) {
 	u := new(User)
-	err := s.db.QueryRow("SELECT id, name, email, is_admin FROM users WHERE id = ? LIMIT 1", id).Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin)
+	err := s.db.QueryRow("SELECT id, name, email, is_admin, color FROM users WHERE id = ? LIMIT 1", id).Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin, &u.Color)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("no user found based on id: %d", id)
@@ -83,8 +83,8 @@ func (s *Store) AddUser(u User, ms *services.MailService) error {
 	}
 
 	_, err = s.db.Exec(`
-		INSERT INTO users(name, email, password_hash, is_admin)
-		VALUES(?, ?, ?, ?)`, u.Name, u.Email, hash, u.IsAdmin)
+		INSERT INTO users(name, email, password_hash, is_admin, color)
+		VALUES(?, ?, ?, ?, ?)`, u.Name, u.Email, hash, u.IsAdmin, u.Color)
 
 	if err != nil {
 		return err
@@ -114,8 +114,8 @@ func (s *Store) UpdateUser(ctx context.Context, id int, u User) error {
 
 	_, err := s.db.ExecContext(ctx, `
 	UPDATE users
-	SET name = ?, email = ?, is_admin = ?
-	WHERE id = ?`, u.Name, u.Email, u.IsAdmin, id)
+	SET name = ?, email = ?, is_admin = ?, color = ?
+	WHERE id = ?`, u.Name, u.Email, u.IsAdmin, u.Color, id)
 
 	if err != nil {
 		return err
@@ -161,7 +161,7 @@ func (s *Store) GetSelf(ctx context.Context) (*User, error) {
 	}
 
 	u := new(User)
-	err := s.db.QueryRowContext(ctx, "SELECT id, name, email, is_admin FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin)
+	err := s.db.QueryRowContext(ctx, "SELECT id, name, email, is_admin, color FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin, &u.Color)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil

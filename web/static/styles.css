@@ -118,6 +118,9 @@ a {
 
 .item-info {
 	padding: 15px;
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
 }
 
 .desktop {
@@ -275,4 +278,11 @@ input:focus {
 		opacity: 0;
 		bottom: 0px;
 	}
+}
+
+.kamu {
+	width: 300px;
+	margin-right: 10px;
+	margin-left: auto;
+	display: flex;
 }

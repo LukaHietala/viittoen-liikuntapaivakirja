@@ -66,22 +66,35 @@
 												 confirm: false,
 												 addPoints: 1
 												 }">
-										<div x-show="!confirm" class="item active">
+										<div x-show="!confirm"
+											 class="item active">
 											<div class="item-info">
-												<strong x-text="challenge.title"></strong>
-												<span x-text="`- Tavoite: ${challenge.pot}`"></span>
-												/
-												<span x-text="challenge.goal_points"></span>
-												<progress x-bind:max="challenge.goal_points"
-														  x-bind:value="`${challenge.pot}`">
-													Edistys mittari
-												</progress>
+												<div :style="`height: 40px;
+															width: 10px;
+															background-color:${challenge.user.color};
+															display:inline-block;
+															margin-right: 10px;
+															margin-top: auto;
+															margin-bottom: auto;
+															border-radius: 3.5px`">
+												</div>
+												<div>
+													<strong x-text="challenge.title"></strong>
+													<span x-text="`- Tavoite: ${challenge.pot}`"></span>
+													/
+													<span x-text="challenge.goal_points"></span>
+													<progress x-bind:max="challenge.goal_points"
+															  x-bind:value="`${challenge.pot}`">
+														Edistys mittari
+													</progress>
+												</div>
 											</div>
 											<div x-show="$store.session.loggedIn"
 												 class="item-actions">
 												<button x-show="!confirm"
 														x-on:click="confirm = !confirm;
-																	addPoints = 1">
+																	addPoints =
+																	1">
 													Lisää suoritus
 												</button>
 											</div>
@@ -131,6 +144,9 @@
 					</div>
 				</div>
 			</main>
+			<img src="/static/ok-kamu.png"
+				 alt="Tyytyväinen kamu istahtaa"
+				 class="kamu"/>
 		</body>
 		<script>
 			document.addEventListener('alpine:init', async () => {

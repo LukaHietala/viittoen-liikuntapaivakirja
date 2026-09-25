@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -75,13 +74,12 @@ func (rs challengesResource) Create(w http.ResponseWriter, r *http.Request) {
 	var challenge db.Challenge
 
 	if err := render.Decode(r, &challenge); err != nil {
-		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 
-	// TODO:
-	if challenge.Title == "" {
-		render.Render(w, r, ErrInvalidRequest("Nimi on pakollinen", errors.New("no title")))
+	if err := challenge.Validate(); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 
@@ -115,13 +113,12 @@ func (rs challengesResource) Update(w http.ResponseWriter, r *http.Request) {
 	var req db.Challenge
 
 	if err := render.Decode(r, &req); err != nil {
-		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
-
-	// TODO:
-	if req.Title == "" {
-		render.Render(w, r, ErrInvalidRequest("Nimi on pakollinen", errors.New("title is missing")))
+	
+	if err := req.Validate(); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 

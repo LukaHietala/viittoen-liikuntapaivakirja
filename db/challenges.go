@@ -68,6 +68,16 @@ func (s *Store) ListChallenges(ctx context.Context, active bool) ([]*Challenge, 
 	}
 
 	for _, c := range challenges {
+		u := new(User)
+		err := s.db.QueryRowContext(ctx, `
+				SELECT id, name, color FROM users WHERE id = ?
+			`, c.UserID).Scan(&u.ID, &u.Name, &u.Color)
+		if err == nil {
+			c.User = u
+		}
+	}
+
+	for _, c := range challenges {
 		pRows, err := s.db.QueryContext(ctx, `
 			SELECT * FROM performances
 			WHERE challenge_id = ?`, c.ID)

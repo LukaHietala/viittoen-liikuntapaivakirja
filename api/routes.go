@@ -150,18 +150,18 @@ type ResetPasswordRequest struct {
 func Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := render.Decode(r, &req); err != nil {
-		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 
 	if req.Name == "" || req.Password == "" {
-		render.Render(w, r, ErrInvalidRequest("Nimi ja salasana ovat pakollisia", errors.New("no name or password")))
+		render.Render(w, r, ErrInvalidRequest(errors.New("Nimi ja salasana on pakollisia")))
 		return
 	}
 
 	id, err := store.VerifyUser(req.Name, req.Password)
 	if err != nil {
-		render.Render(w, r, ErrInvalidRequest("Nimi tai salasana on väärin", err))
+		render.Render(w, r, ErrInvalidRequest(errors.New("Nimi tai salasana on väärin")))
 		return
 	}
 
@@ -183,20 +183,20 @@ func Login(w http.ResponseWriter, r *http.Request) {
 func ForgotPassword(w http.ResponseWriter, r *http.Request, ms *services.MailService) {
 	var req ForgotPasswordRequest
 	if err := render.Decode(r, &req); err != nil {
-		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 
 	_, err := mail.ParseAddress(req.Email)
 	if err != nil {
-		render.Render(w, r, ErrInvalidRequest("Sähköposti ei ole oikeassa muodossa", err))
+		render.Render(w, r, ErrInvalidRequest(errors.New("Sähköposti ei ole oikeassa muodossa")))
 		return
 	}
 
 	token := MakeResetToken(req.Email)
 	err = store.StartResetPassword(req.Email, token, ms)
 	if err != nil {
-		render.Render(w, r, ErrInvalidRequest("Käyttäjää ei löytynyt", err))
+		render.Render(w, r, ErrInvalidRequest(errors.New("Käyttäjää ei löytynyt")))
 	}
 	w.WriteHeader(200)
 }
@@ -204,19 +204,19 @@ func ForgotPassword(w http.ResponseWriter, r *http.Request, ms *services.MailSer
 func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	var req ResetPasswordRequest
 	if err := render.Decode(r, &req); err != nil {
-		render.Render(w, r, ErrInvalidRequest("invalid json payload", err))
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 
 	if req.Token == "" || req.NewPassword == "" {
 		// TODO: Erota
-		render.Render(w, r, ErrInvalidRequest("Linkki on vanhentunut tai salasana on tyhjä", errors.New("no token or new password")))
+		render.Render(w, r, ErrInvalidRequest(errors.New("Linkki on vanhentunut tai salasana on tyhjä")))
 		return
 	}
 
 	token, err := tokenAuth.Decode(req.Token)
 	if err != nil {
-		render.Render(w, r, ErrInvalidRequest("Linkki on vanhentunut", err))
+		render.Render(w, r, ErrInvalidRequest(errors.New("Linkki on vanhentunut")))
 		return
 	}
 	err = store.FinishResetPassword(token, req.NewPassword)
@@ -238,11 +238,10 @@ func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func ErrInvalidRequest(msg string, err error) render.Renderer {
-	log.Println("invalid request error:", err)
+func ErrInvalidRequest(err error) render.Renderer {
 	return &ErrResponse{
 		HTTPStatusCode: http.StatusBadRequest,
-		ErrorText:      msg,
+		ErrorText:      err.Error(),
 	}
 }
 

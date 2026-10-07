@@ -120,7 +120,9 @@
 													Peruuta
 												</button>
 												<button x-show="confirm"
-														:disabled="addPoints == null"
+														:disabled=
+														"addPoints == null ||
+														 addPoints < 1"
 														x-on:click="addPerformance($event,
 																	Math.round(addPoints),
 																	challenge.id);

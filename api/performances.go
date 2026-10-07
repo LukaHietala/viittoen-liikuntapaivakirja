@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -60,6 +61,11 @@ func (rs performancesResource) Create(w http.ResponseWriter, r *http.Request) {
 
 	if err := render.Decode(r, &req); err != nil {
 		render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
+
+	if req.Points < 1 {
+		render.Render(w, r, ErrInvalidRequest(errors.New("Suorituksen pisteet on oltava vähintään 1")))
 		return
 	}
 

@@ -288,7 +288,9 @@
 										<button 
 											:disabled=
 											"challenge.title.length == 0 ||
+											 challenge.title.length > 254 ||
 											 challenge.description == null ||
+											 challenge.description > 2000 ||
 											 challenge.description.length == 0 ||
 											 parseInt(challenge.goal_points) == NaN ||
 											 parseInt(challenge.goal_points) < 1 ||
@@ -323,6 +325,7 @@
 											class="secondary-btn">
 											Peruuta
 										</button>
+                                        <small x-show="confirm">Tämä poistaa kaikki tämän haasteen suoritukset!</small>
 									</div>
 								</section>
 							</template>
@@ -414,36 +417,68 @@
 			window.badInt = (str) => !Number.isInteger(parseFloat(str));
 			
 			window.addChallenge = async (event) => {
-				const response = await fetch("/api/challenges", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json"
-					},
-					body: JSON.stringify(Alpine.store("add").challenge)
-				});
-				clearAdd();
-				Alpine.store("state").challenges = await getChallenges();
-				toast("Lisättiin haaste");
+                const addingChallenge = Alpine.store("add").challenge
+                try {
+                    const response = await fetch("/api/challenges", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(addingChallenge)
+                    });
+                    const result = await response.json()
+                    if (!response.ok) {
+                        throw new Error(result.error)
+                    }
+                    toast(`Lisättiin haaste ${result.title}`);
+                } catch (error) {
+                    toast(error.message)
+                    console.log(error.message)
+                } finally {
+                    Alpine.store("state").challenges = await getChallenges();
+                    clearAdd();
+                }
 			};
 			// Challenges
 			window.deleteChallenge = async (event, id) => {
-				const response = await fetch(`/api/challenges/${id}`, {
-					method: "DELETE",
-				});
-				Alpine.store("state").challenges = await getChallenges();
-				toast("Poistettiin haaste");
+                try {
+                    const response = await fetch(`/api/challenges/${id}`, {
+                        method: "DELETE",
+                    });
+
+                    const result = await response.json()
+                    if (!response.ok) {
+                        throw new Error(result.error)
+                    }
+                    toast(`Poistettiin haaste ${result.title}`);
+                } catch (error) {
+                    toast(error.message)
+                    console.log(error.message)
+                } finally {
+                    Alpine.store("state").challenges = await getChallenges();
+                }
 			};
 			window.updateChallenge = async (event, id) => {
 				const challenge = Alpine.store("state").challenges.filter(
 					(challenge) => challenge.id == id,
 				)[0];
-				const response = await fetch(`/api/challenges/${id}`, {
-					method: "PATCH",
-					headers: {
-						"Content-Type": "application/json"
-					},
-					body: JSON.stringify(challenge),
-				});
+                try {
+                    const response = await fetch(`/api/challenges/${id}`, {
+                        method: "PATCH",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(challenge),
+                    });
+                    if (!response.ok) {
+                        const result = await response.json()
+                        throw new Error(result.error)
+                    }
+                    toast(`Päivitettiin haaste ${challenge.title}`)
+                } catch (error) {
+                    toast(error.message)
+                    console.log(error.message)
+                }
 			};
 			// Performances
 			window.deletePerformance = async (e, performance_id) => {

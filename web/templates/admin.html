@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE HTML>
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
@@ -202,6 +202,7 @@
 					}
 					return await response.json();
 				} catch (e) {
+                    toast("Jotain meni pieleen käyttäjien haussa")
 					console.error(e.message);
 				}
 			}
@@ -247,7 +248,8 @@
 					method: "DELETE",
 				});
 				Alpine.store("state").users = await getUsers();
-				toast("Poistettiin käyttäjä");
+                const result = await response.json()
+                toast(`Poistettiin käyttäjä ${result.name}`);
 			};
 			window.updateUser = async (event, id) => {
 				const user = Alpine.store("state").users.filter(
@@ -260,7 +262,8 @@
 					},
 					body: JSON.stringify(user),
 				});
-				toast("Päivitettiin käyttäjää");
+                const result = await response.json()
+                toast(`Päivitettiin käyttäjä ${result.name}`);
 			};
 
 			// Session

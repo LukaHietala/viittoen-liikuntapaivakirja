@@ -58,7 +58,7 @@ func (c *Challenge) Validate() error {
 		return errors.New("Haasteen kuvaus puuttuu")
 	}
 
-	if len(c.Title) < 1 || len(c.Title) > 255 {
+	if len(c.Description) < 1 || len(c.Description) > 2000 {
 		return errors.New("Haasteen kuvaus voi olla 1-2000 merkkiä pitkä")
 	}
 

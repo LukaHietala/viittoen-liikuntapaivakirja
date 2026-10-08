@@ -1,143 +1,129 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<script
-			defer
-			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js">
-		</script>
+		<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 		<script src="/static/utils.js"></script>
 		<title>Profiili</title>
 		<link rel="stylesheet" href="static/styles.css" />
 	</head>
 	<body>
 		<main x-data="{ showNav: false }">
-            <nav class="navbar"> 
-                <div class="navbar-row">
-                    <div class="desktop">
-                        <a href="/" class="btn-link">Etusivu</a>
-                        <a href="/profile"
-						   class="btn-link active-nav-item">Profiili</a>
-                        <a href="/challenges" class="btn-link">Haasteet</a>
-                        <a href="/admin" x-show="$store.session.admin"
-						   class="btn-link" x-cloak>
-                            Ylläpitäjälle
-                        </a>
-                    </div>
-                    <div class="desktop">
-                        <a href="/logout" class="btn-link">Kirjaudu ulos</a>
-                    </div>
-                    <div class="mobile"></div>
-                    <div class="mobile">
-                        <button class="secondary-btn icon-btn"
-                                x-on:click="showNav = !showNav">
-                            <img src="/static/menu.svg" alt="Avaa navigaatio" />
-                        </button>
-                    </div>
-                </div>
-                <!-- MOBILE NAV -->
-                <div x-show="showNav" class="navbar-col" x-transition>
-                    <a href="/" class="btn-link">Etusivu</a>
-                    <a href="/profile"
-					   class="btn-link active-nav-item">Profiili</a>
-                    <a href="/challenges" class="btn-link">Haasteet</a>
-                    <a href="/admin" x-show="$store.session.admin"
-                       class="btn-link" x-cloak>
-                        Ylläpitäjälle
-                    </a>
+			<nav class="navbar">
+				<div class="navbar-row">
+					<div class="desktop">
+						<a href="/" class="btn-link">Etusivu</a>
+						<a href="/profile" class="btn-link active-nav-item">Profiili</a>
+						<a href="/challenges" class="btn-link">Haasteet</a>
+						<a href="/admin" x-show="$store.session.admin" class="btn-link" x-cloak> Ylläpitäjälle </a>
+					</div>
+					<div class="desktop">
+						<a href="/logout" class="btn-link">Kirjaudu ulos</a>
+					</div>
+					<div class="mobile"></div>
+					<div class="mobile">
+						<button class="secondary-btn icon-btn" x-on:click="showNav = !showNav">
+							<img src="/static/menu.svg" alt="Avaa navigaatio" />
+						</button>
+					</div>
+				</div>
+				<!-- MOBILE NAV -->
+				<div x-show="showNav" class="navbar-col" x-transition>
+					<a href="/" class="btn-link">Etusivu</a>
+					<a href="/profile" class="btn-link active-nav-item">Profiili</a>
+					<a href="/challenges" class="btn-link">Haasteet</a>
+					<a href="/admin" x-show="$store.session.admin" class="btn-link" x-cloak> Ylläpitäjälle </a>
 					<a href="/logout" class="btn-link">Kirjaudu ulos</a>
-                </div>
-            </nav>
-            <div class="container">
-                <h2 x-text="`Profiili (${$store.session.name})`"></h2>
-                <section style="padding: 15px">
-                    <span
-                        x-text="`Keräämäsi pisteet:
+				</div>
+			</nav>
+			<div class="container">
+				<h2 x-text="`Profiili (${$store.session.name})`"></h2>
+				<section style="padding: 15px">
+					<span
+						x-text="`Keräämäsi pisteet:
                                 ${sumPerformances($store.state.self.performances)}`"
-                        >
-                    </span>
-                </section>
-                <!-- LUUKAS ÄLÄ NÄYTÄ JOS EI HAASTEITA -->
-                <h3>Suorituksesi</h3>
-                <div class="list">
-                    <template x-for="performance in $store.state.self.performances">
-                        <div x-data="{
+					>
+					</span>
+				</section>
+				<!-- LUUKAS ÄLÄ NÄYTÄ JOS EI HAASTEITA -->
+				<h3>Suorituksesi</h3>
+				<div class="list">
+					<template x-for="performance in $store.state.self.performances">
+						<div
+							x-data="{
 									 challenge: null,
 									 open: false
-									 }">
-                            <div class="item">
-                                <div class="item-info">
-                                    <span>
-                                        Pisteet:
-                                        <strong x-text="performance.points">
-                                        </strong>
-                                    </span>
-                                    <span>
-                                        - Suoritettu
-                                        <strong x-text="performance.created_at">
-                                        </strong>
-                                    </span>
-                                </div>
-                                <div class="item-actions">
-                                    <button x-on:click="open = !open">
-                                        Näytä haaste
-                                    </button>
-                                    <button x-on:click="await deletePerformance(
+									 }"
+						>
+							<div class="item">
+								<div class="item-info">
+									<span>
+										Pisteet:
+										<strong x-text="performance.points"> </strong>
+									</span>
+									<span>
+										- Suoritettu
+										<strong x-text="performance.created_at"> </strong>
+									</span>
+								</div>
+								<div class="item-actions">
+									<button x-on:click="open = !open">Näytä haaste</button>
+									<button
+										x-on:click="await deletePerformance(
 														$event,
 														performance.id)"
-											class="secondary-btn icon-btn"
-											:disabled="!(Date.parse(performance.challenge.end_date)
+										class="secondary-btn icon-btn"
+										:disabled="!(Date.parse(performance.challenge.end_date)
 													> Date.now())"
-                                            :title="!(Date.parse(performance.challenge.end_date)
+										:title="!(Date.parse(performance.challenge.end_date)
 													> Date.now()) ?
 												'Et voi poistaa vanhentuneen haasteen suorituksia' : ''"
-                                            >
-                                        <img src="/static/can.svg" alt="Poista" />
-                                    </button>
-                                </div>
-                            </div>
-                            <template x-if="open" x-data="{ challenge: performance.challenge }">
-                                <section style="margin-top: 6px;">
-                                    <div style="padding: 15px;">
-                                        <strong x-text="challenge.title"></strong><br />
-                                        Ajanjakso:
-                                        <span x-text="challenge.start_date"></span>
-                                        -
-                                        <span x-text="challenge.end_date"></span>
-                                    </div>
-                                </section>
+									>
+										<img src="/static/can.svg" alt="Poista" />
+									</button>
+								</div>
+							</div>
+							<template x-if="open" x-data="{ challenge: performance.challenge }">
+								<section style="margin-top: 6px">
+									<div style="padding: 15px">
+										<strong x-text="challenge.title"></strong><br />
+										Ajanjakso:
+										<span x-text="challenge.start_date"></span>
+										-
+										<span x-text="challenge.end_date"></span>
+									</div>
+								</section>
 							</template>
-                        </div>
-                    </template>
-                </div>
-                <section x-show="$store.state.self.performances == null ||
-                                 $store.state.self.performances.length == 0" style="padding: 15px;">
-                    <span>Ei suorituksia.</span>
-                </section>
-            </div>
+						</div>
+					</template>
+				</div>
+				<section
+					x-show="$store.state.self.performances == null ||
+                                 $store.state.self.performances.length == 0"
+					style="padding: 15px"
+				>
+					<span>Ei suorituksia.</span>
+				</section>
+			</div>
 		</main>
-		<img src="/static/innostunut-kamu.png"
-			 alt="Innostunut kamu vilkuttaa"
-			 class="kamu"/>
+		<img src="/static/innostunut-kamu.webp" alt="Innostunut kamu vilkuttaa" class="kamu" />
 	</body>
 	<script type="text/javascript">
 		document.addEventListener("alpine:init", async () => {
-			Alpine.store('session', {
+			Alpine.store("session", {
 				loggedIn: false,
-				name: "Ladataan"
+				name: "Ladataan",
 			});
-			
+
 			Alpine.store("state", {
 				self: {
 					performances: [],
 				},
 			});
 
-			window.sumPerformances = (performances) => (
-				(performances == null ) ?
-					0 : performances.reduce((sum, x) => sum + x.points, 0)
-			);
+			window.sumPerformances = (performances) =>
+				performances == null ? 0 : performances.reduce((sum, x) => sum + x.points, 0);
 
 			const getProfile = async (event) => {
 				const res = await fetch("/api/session/self");
@@ -160,15 +146,15 @@
 				}
 				await getProfile();
 				toast("Poistettiin suoritus");
-			}
+			};
 			// Session
 			const loggedIn = async (event) => {
 				const res = await fetch("/api/session/valid");
 				const json = await res.json();
-				Alpine.store('session', {
+				Alpine.store("session", {
 					loggedIn: await json.ok,
 					admin: await json.admin,
-					name: await json.name
+					name: await json.name,
 				});
 			};
 			await loggedIn();

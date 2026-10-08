@@ -5,60 +5,44 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Onboarding</title>
 		<link rel="stylesheet" href="static/styles.css" />
-		<script
-			defer
-			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
-		></script>
+		<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 	</head>
 	<body>
 		<main x-data="">
 			<div x-show="!$store.state.sent">
 				<h2>Luo ylläpitäjän tunnukset</h2>
 				<p>
-					Sivulla pitää olla vähintään yksi ylläpitäjä käyttäjä, joka
-					hallinnoi sivua. Kun olet täyttänyt tiedot sähköpostiisi tulee
-					oikeat tunnukset.
+					Sivulla pitää olla vähintään yksi ylläpitäjä käyttäjä, joka hallinnoi sivua. Kun olet täyttänyt
+					tiedot sähköpostiisi tulee oikeat tunnukset.
 				</p>
 				<section>
 					<div style="padding: 15px">
 						<label>Nimi:</label><br />
-						<input
-							type="text"
-							name="name"
-							x-model="$store.state.name"/>
-						<br/>
-						<label>Sähköposti:</label><br/>
-						<input
-							type="text"
-							name="email"
-							x-model="$store.state.email"/>
-						<br/>
+						<input type="text" name="name" x-model="$store.state.name" />
+						<br />
+						<label>Sähköposti:</label><br />
+						<input type="text" name="email" x-model="$store.state.email" />
+						<br />
 					</div>
 					<div style="padding: 15px; border-top: 1px solid var(--border)">
-						<button
-							type="submit"
-							x-on:click="createUser($event);">
-							Lisää käyttäjä
-						</button>
+						<button type="submit" x-on:click="createUser($event);">Lisää käyttäjä</button>
 					</div>
 				</section>
 			</div>
 			<div x-show="$store.state.sent">
-                <section style="padding: 15px;">
-                    <span>Tunnukset lähetettiin sähköpostiisi. Voit sulkea tämän välilehden.</span>
-                </section>
-            </div>
+				<section style="padding: 15px">
+					<span>Tunnukset lähetettiin sähköpostiisi. Voit sulkea tämän välilehden.</span>
+				</section>
+			</div>
 		</main>
-		<img src="/static/innostunut-kamu.png"
-			 alt="Innostunut kamu vilkuttaa"
-			 class="kamu"/>
+		<img src="/static/innostunut-kamu.webp" alt="Innostunut kamu vilkuttaa" class="kamu" />
 	</body>
 	<script type="text/javascript">
 		document.addEventListener("alpine:init", async () => {
 			Alpine.store("state", {
 				name: "",
 				email: "",
-				sent: false
+				sent: false,
 			});
 
 			window.createUser = async (event) => {
@@ -66,19 +50,19 @@
 					const response = await fetch("/api/users", {
 						method: "POST",
 						headers: {
-							"Content-Type": "application/json"
+							"Content-Type": "application/json",
 						},
 						body: JSON.stringify({
 							name: Alpine.store("state").name,
 							email: Alpine.store("state").email,
-							is_admin: true
+							is_admin: true,
 						}),
 					});
 					if (!response.ok) {
 						const json = await response.json();
 						alert(json.error);
 					} else {
-						Alpine.store('state').sent = true;
+						Alpine.store("state").sent = true;
 					}
 				} catch (e) {
 					console.error(e.message);

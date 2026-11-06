@@ -176,7 +176,8 @@
 						if (!response.ok) {
 							throw new Error("Jotain meni pieleen: " + response.status);
 						}
-						return await response.json()
+						const challenges = await response.json();
+						return challenges.toSorted((a, b) => b.id - a.id);
 					} catch (e) {
     					console.error(e.message);
 					}

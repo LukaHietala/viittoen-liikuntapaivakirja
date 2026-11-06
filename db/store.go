@@ -38,18 +38,6 @@ var schema = `
 	);
 `
 
-// var tempData = `
-// 	INSERT INTO users VALUES(NULL, "Jaakko", "jaakko@cat-v.org", "$2a$12$EA6dIz7gLEN4Ziiy60meleFgxxRscjAkfVLkqCuCFnhfnFX/AMike", FALSE);
-// 	INSERT INTO users VALUES(NULL, "Tero", "tero@cat-v.org", "$2a$12$EA6dIz7gLEN4Ziiy60meleFgxxRscjAkfVLkqCuCFnhfnFX/AMike", FALSE);
-// 	INSERT INTO users VALUES(NULL, "admin", "admin@admin.com", "$2a$12$oNY0On.kHD0PFA4yg/HwaOxyAKjcrDacFaf3dKtxLzH3XULDPVCtu", TRUE);
-// 	INSERT INTO challenges VALUES(NULL, "Käy salilla", "Kerätään sali tunteja.", "tunteja", 10, "2026-08-01", "2026-09-25", 1);
-// 	INSERT INTO challenges VALUES(NULL, "Lenkkihaaste", "Joka päivä kävele 1 km", "km", 25, "2026-06-01", "2026-07-25", 1);
-// 	INSERT INTO performances(points, user_id, challenge_id) VALUES (2, 1, 1);
-// 	INSERT INTO performances(points, user_id, challenge_id) VALUES (1, 1, 1);
-// 	INSERT INTO performances(points, user_id, challenge_id) VALUES (1, 2, 1);
-// 	INSERT INTO performances(points, user_id, challenge_id) VALUES (4, 2, 2);
-// `
-
 type Store struct {
 	db *sql.DB
 }
@@ -72,10 +60,6 @@ func Connect() (*sql.DB, error) {
 	if _, err = db.Exec(schema); err != nil {
 		return nil, err
 	}
-	//
-	// if _, err = db.Exec(tempData); err != nil {
-	// 	return nil, err
-	// }
 
 	return db, nil
 }

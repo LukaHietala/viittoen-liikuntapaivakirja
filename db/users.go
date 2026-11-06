@@ -89,8 +89,7 @@ func (s *Store) AddUser(u User, ms *services.MailService) error {
 	if err != nil {
 		return err
 	}
-	// TODO:template
-	err = ms.Send("Käyttäjätunnukset", fmt.Sprintf("Salasana: %s", plain), u.Email)
+	err = ms.Send("Käyttäjätunnukset", fmt.Sprintf("Käyttäjätunnus: %s\nSalasana: %s", u.Name, plain), u.Email)
 	if err != nil {
 		return err
 	}
@@ -255,7 +254,7 @@ func (s *Store) StartResetPassword(email, token string, ms *services.MailService
 	}
 
 	// TODO!!!!!
-	resetLink := "http://localhost:3000/reset-password?token=" + token
+	resetLink := "https://viittoenliikkuu.fi/reset-password?token=" + token
 
 	err = ms.Send("Nollaa salasana", resetLink, email)
 	if err != nil {

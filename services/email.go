@@ -3,39 +3,50 @@ package services
 import (
 	"context"
 	"fmt"
-	"time"
 
-	mailgun "github.com/mailgun/mailgun-go/v5"
+	"github.com/wneessen/go-mail"
 )
 
 type MailService struct {
-	client *mailgun.Client
-	apiKey string
-	domain string
+	server   string
+	domain   string
+	password string
 }
 
-func NewMailService(apiKey, domain string) *MailService {
+func NewMailService(server, domain, password string) *MailService {
 	return &MailService{
-		client: mailgun.NewMailgun(apiKey),
-		apiKey: apiKey,
-		domain: domain,
+		server:   server,
+		domain:   domain,
+		password: password,
 	}
 }
 
 func (ms *MailService) Send(subject, body, recipient string) error {
-	//mg.SetAPIBase(mailgun.APIBaseEU)
-
-	sender := "<postmaster@sandbox7d3f343edb8f4122af4777d52f9b6aa5.mailgun.org>"
-	message := mailgun.NewMessage(ms.domain, sender, subject, body, recipient)
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	_, err := ms.client.Send(ctx, message)
+	message := mail.NewMsg()
+	if err := message.From(ms.domain); err != nil {
+		return err
+	}
+	if err := message.To(recipient); err != nil {
+		return err
+	}
+	message.Subject(subject)
+	message.SetBodyString(mail.TypeTextPlain, body)
+
+	client, err := mail.NewClient(ms.server,
+		mail.WithSMTPAuth(mail.SMTPAuthAutoDiscover), mail.WithTLSPortPolicy(mail.TLSMandatory),
+		mail.WithUsername(ms.domain), mail.WithPassword(ms.password),
+	)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("sent email, to: %s subject: %s, body: %s\n", message.To(), message.Subject(), message.Text())
+	if err := client.DialAndSendWithContext(ctx, message); err != nil {
+		return err
+	}
+
+	fmt.Printf("sent email, to: %s subject: %s, body: %s\n", recipient, subject, body)
 
 	return nil
 }

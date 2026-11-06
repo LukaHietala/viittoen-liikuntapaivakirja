@@ -25,7 +25,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ms := services.NewMailService(cfg.MailgunAPIKey, cfg.MailgunDomain)
+	ms := services.NewMailService(cfg.STMP_SERVER, cfg.STMP_DOMAIN, cfg.STMP_PASSWORD)
 
 	api.InitAuth(cfg.JWTSecret)
 
@@ -45,6 +45,7 @@ func main() {
 	defer stop()
 
 	go func() {
+		log.Printf("listening on %s", server.Addr)
 		err := server.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatal(err)

@@ -130,6 +130,7 @@
 				Alpine.store("state", {
 					self: await res.json(),
 				});
+				Alpine.store("state").self.performances.sort((a, b) => b.id - a.id);
 			};
 			await getProfile();
 			// Performances

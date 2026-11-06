@@ -6,9 +6,10 @@ import (
 )
 
 type Config struct {
-	MailgunAPIKey string `env:"MAILGUN_API_KEY"`
-	MailgunDomain string `env:"MAILGUN_DOMAIN"`
 	JWTSecret     string `env:"JWT_SECRET"`
+	STMP_SERVER   string `env:"STMP_SERVER"`
+	STMP_DOMAIN   string `env:"STMP_DOMAIN"`
+	STMP_PASSWORD string `env:"STMP_PASSWORD"`
 }
 
 func LoadEnv() (Config, error) {

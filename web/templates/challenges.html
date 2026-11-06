@@ -354,7 +354,9 @@
 					if (!response.ok) {
 						throw new Error("Jotain meni pieleen: " + response.status);
 					}
-					return await response.json();
+					const challenges = await response.json();
+					challenges.forEach((ch) => ch.performances.sort(((a, b) => b.id - a.id)));
+					return challenges.toSorted((a, b) => b.id - a.id);
 				} catch (e) {
 					console.error(e.message);
 				}

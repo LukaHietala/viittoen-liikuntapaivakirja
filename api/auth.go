@@ -18,8 +18,7 @@ func MakeSessionToken(userId int) string {
 	}
 	// TODO: refresh tokens maybe?
 	// TODO: no refresh tokens
-	// jwtauth.SetExpiryIn(claims, 24*31*time.Hour)
-	jwtauth.SetExpiryIn(claims, 1*time.Second)
+	jwtauth.SetExpiryIn(claims, 24*31*time.Hour)
 	jwtauth.SetIssuedNow(claims)
 	_, token, _ := tokenAuth.Encode(claims)
 	return token

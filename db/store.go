@@ -16,6 +16,17 @@ var schema = `
 		color TEXT NOT NULL
 	);
 
+	CREATE TABLE IF NOT EXISTS collections (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		title TEXT NOT NULL,
+		description TEXT NOT NULL,
+		goal_points INTEGER NOT NULL,
+		start_date TEXT NOT NULL,
+		end_date TEXT NOT NULL,
+		user_id	INTEGER NOT NULL,
+		created_at TEXT NOT NULL DEFAULT (datetime(CURRENT_TIMESTAMP, 'localtime'))
+	);
+
 	CREATE TABLE IF NOT EXISTS challenges (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		title TEXT NOT NULL,
@@ -24,7 +35,10 @@ var schema = `
 		goal_points INTEGER NOT NULL,
 		start_date TEXT NOT NULL,
 		end_date TEXT NOT NULL,
-		user_id	INTEGER NOT NULL
+		user_id	INTEGER NOT NULL,
+		collection_id INTEGER NOT NULL,
+		created_at TEXT NOT NULL DEFAULT (datetime(CURRENT_TIMESTAMP, 'localtime')),
+		FOREIGN KEY(collection_id) REFERENCES collections(id) ON DELETE CASCADE
 	);
 
 	CREATE TABLE IF NOT EXISTS performances (
@@ -46,9 +60,8 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
-func Connect() (*sql.DB, error) {
-	// https://www.sqlite.org/pragma.html
-	db, err := sql.Open("sqlite3", "viittoen.db?_journal_mode=WAL&_foreign_keys=on&_busy_timeout=5000")
+func Connect(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return nil, err
 	}

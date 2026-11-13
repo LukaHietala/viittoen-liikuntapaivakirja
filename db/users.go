@@ -3,118 +3,126 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
-
-	"github.com/LukaHietala/viittoen-liikuntapaivakirja/services"
-	"github.com/go-chi/jwtauth/v5"
-	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
-func (s *Store) ListUsers() ([]*User, error) {
-	rows, err := s.db.Query(`SELECT id, name, email, is_admin, color FROM users`)
+var (
+	ErrUserNotFound = errors.New("user not found")
+)
+
+func (s *Store) ListUsers(ctx context.Context) ([]*User, error) {
+	query := `
+		SELECT id, name, email, is_admin, color
+		FROM users
+	`
+
+	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	users := make([]*User, 0)
+	var users []*User
 	for rows.Next() {
-		u := new(User)
-		err := rows.Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin, &u.Color)
+		user := &User{}
+		err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.IsAdmin, &user.Color)
 		if err != nil {
 			return nil, err
 		}
-		users = append(users, u)
+		users = append(users, user)
 	}
 
-	if err = rows.Err(); err != nil {
+	return users, rows.Err()
+}
+
+func (s *Store) FindUserByID(ctx context.Context, id int) (*User, error) {
+	query := `
+		SELECT id, name, email, is_admin, color
+		FROM users
+		WHERE id = ? LIMIT 1
+	`
+
+	var user User
+	err := s.db.QueryRowContext(ctx, query, id).
+		Scan(&user.ID, &user.Name, &user.Email, &user.IsAdmin, &user.Color)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("%w; id: %d", ErrUserNotFound, id)
+	}
+	if err != nil {
 		return nil, err
 	}
 
-	for _, u := range users {
-		uRows, err := s.db.Query(`
-			SELECT * FROM performances
-			WHERE user_id = ?`, u.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		performances := make([]*Performance, 0)
-		for uRows.Next() {
-			p := new(Performance)
-			err = uRows.Scan(&p.ID, &p.Points, &p.UserID, &p.ChallengeID, &p.CreatedAt)
-			if err != nil {
-				uRows.Close()
-				return nil, err
-			}
-			performances = append(performances, p)
-		}
-
-		if err = uRows.Err(); err != nil {
-			uRows.Close()
-			return nil, err
-		}
-
-		u.Performances = performances
-
-		uRows.Close()
-	}
-
-	return users, nil
+	return &user, nil
 }
 
-func (s *Store) GetUserByID(id int) (*User, error) {
-	u := new(User)
-	err := s.db.QueryRow("SELECT id, name, email, is_admin, color FROM users WHERE id = ? LIMIT 1", id).Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin, &u.Color)
+func (s *Store) FindUserByName(ctx context.Context, name string) (*User, error) {
+	query := `
+		SELECT id, name, email, password_hash, is_admin, color
+		FROM users
+		WHERE name = ? LIMIT 1
+	`
+
+	var user User
+	err := s.db.QueryRowContext(ctx, query, name).
+		Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.IsAdmin, &user.Color)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("%w; name: %s", ErrUserNotFound, name)
+	}
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("no user found based on id: %d", id)
-		}
 		return nil, err
 	}
-	return u, nil
+
+	return &user, nil
 }
 
-func (s *Store) AddUser(u User, ms *services.MailService) error {
-	plain := RandomString(5)
-	hash, err := HashPassword(plain)
+func (s *Store) FindUserByEmail(ctx context.Context, email string) (*User, error) {
+	query := `
+		SELECT id, name, email, password_hash, is_admin, color
+		FROM users
+		WHERE email = ? LIMIT 1
+	`
+
+	var user User
+	err := s.db.QueryRowContext(ctx, query, email).
+		Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.IsAdmin, &user.Color)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("%w; email: %s", ErrUserNotFound, email)
+	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = s.db.Exec(`
+	return &user, nil
+}
+
+func (s *Store) AddUser(ctx context.Context, user *User) error {
+	query := `
 		INSERT INTO users(name, email, password_hash, is_admin, color)
-		VALUES(?, ?, ?, ?, ?)`, u.Name, u.Email, hash, u.IsAdmin, u.Color)
+		VALUES(?, ?, ?, ?, ?)
+	`
 
+	_, err := s.db.ExecContext(ctx, query, user.Name, user.Email, user.PasswordHash, user.IsAdmin, user.Color)
 	if err != nil {
 		return err
 	}
-	err = ms.Send("Käyttäjätunnukset", fmt.Sprintf("Käyttäjätunnus: %s\nSalasana: %s", u.Name, plain), u.Email)
-	if err != nil {
-		return err
-	}
+
+	// TODO: Rows affected check if necessary (applies to other delete/updates)
 
 	return nil
 }
 
-func (s *Store) UpdateUser(ctx context.Context, id int, u User) error {
-	token, claims, _ := jwtauth.FromContext(ctx)
+func (s *Store) UpdateUser(ctx context.Context, user *User) error {
+	query := `
+    	UPDATE users
+		SET name = ?, email = ?, is_admin = ?, color = ?
+		WHERE id = ?
+    `
 
-	if token == nil || jwt.Validate(token) != nil {
-		return fmt.Errorf("unable to validate user token")
-	}
-	userIDFloat, ok := claims["user_id"].(float64)
-	if !ok {
-		return fmt.Errorf("unable to convert user_id to float")
-	}
-	if u.ID == int(userIDFloat) && !u.IsAdmin {
-		return fmt.Errorf("can't remove own admin privileges")
-	}
-
-	_, err := s.db.ExecContext(ctx, `
-	UPDATE users
-	SET name = ?, email = ?, is_admin = ?, color = ?
-	WHERE id = ?`, u.Name, u.Email, u.IsAdmin, u.Color, id)
+	_, err := s.db.ExecContext(ctx, query, user.Name, user.Email, user.IsAdmin, user.Color, user.ID)
 
 	if err != nil {
 		return err
@@ -123,164 +131,13 @@ func (s *Store) UpdateUser(ctx context.Context, id int, u User) error {
 	return nil
 }
 
-func (s *Store) DeleteUser(ctx context.Context, id int) error {
-	token, claims, _ := jwtauth.FromContext(ctx)
-
-	if token == nil || jwt.Validate(token) != nil {
-		return fmt.Errorf("unable to validate user token")
-	}
-	userIDFloat, ok := claims["user_id"].(float64)
-	if !ok {
-		return fmt.Errorf("unable to convert user_id to float")
-	}
-	if id == int(userIDFloat) {
-		return fmt.Errorf("can't remove self")
-	}
-
-	_, err := s.db.ExecContext(ctx, `
+func (s *Store) DeleteUserByID(ctx context.Context, id int) error {
+	query := `
 		DELETE FROM users
-		WHERE id = ?`, id)
+		WHERE id = ?
+	`
 
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Store) GetSelf(ctx context.Context) (*User, error) {
-	token, claims, _ := jwtauth.FromContext(ctx)
-
-	if token == nil || jwt.Validate(token) != nil {
-		return nil, fmt.Errorf("unable to validate user token")
-	}
-	userIDFloat, ok := claims["user_id"].(float64)
-	if !ok {
-		return nil, fmt.Errorf("unable to convert user_id to float")
-	}
-
-	u := new(User)
-	err := s.db.QueryRowContext(ctx, "SELECT id, name, email, is_admin, color FROM users WHERE id = ? LIMIT 1", int(userIDFloat)).Scan(&u.ID, &u.Name, &u.Email, &u.IsAdmin, &u.Color)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT * FROM performances
-		WHERE user_id = ?`, u.ID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	performances := make([]*Performance, 0)
-	for rows.Next() {
-		p := new(Performance)
-		err = rows.Scan(&p.ID, &p.Points, &p.UserID, &p.ChallengeID, &p.CreatedAt)
-		if err != nil {
-			rows.Close()
-			return nil, err
-		}
-		performances = append(performances, p)
-	}
-
-	if err = rows.Err(); err != nil {
-		rows.Close()
-		return nil, err
-	}
-
-	for _, p := range performances {
-		c := new(Challenge)
-		err := s.db.QueryRowContext(ctx,
-			"SELECT * FROM challenges WHERE id = ? LIMIT 1", p.ChallengeID).Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints, &c.StartDate, &c.EndDate, &c.UserID)
-		if err != nil {
-			rows.Close()
-			return nil, err
-		}
-
-		p.Challenge = c
-	}
-
-	u.Performances = performances
-
-	rows.Close()
-
-	return u, nil
-}
-
-func (s *Store) GetSession(id int) (*User, error) {
-	u := new(User)
-	err := s.db.QueryRow("SELECT id, name, is_admin FROM users WHERE id = ? LIMIT 1", id).Scan(&u.ID, &u.Name, &u.IsAdmin)
-	if err != nil {
-		return nil, err
-	}
-
-	return u, nil
-}
-
-func (s *Store) VerifyUser(name, password string) (int, error) {
-	u := new(User)
-	row := s.db.QueryRow("SELECT id, name, password_hash FROM users WHERE name = ?", name)
-	err := row.Scan(&u.ID, &u.Name, &u.PasswordHash)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return 0, fmt.Errorf("no user found with the name of: %s", name)
-		}
-		return 0, err
-	}
-
-	if VerifyHash(password, u.PasswordHash) {
-		return u.ID, nil
-	} else {
-		return 0, fmt.Errorf("wrong password")
-	}
-}
-
-func (s *Store) StartResetPassword(email, token string, ms *services.MailService) error {
-	u := new(User)
-	row := s.db.QueryRow("SELECT id FROM users WHERE email = ?", email)
-	err := row.Scan(&u.ID)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return fmt.Errorf("no user found with the email of: %s", email)
-		}
-		return err
-	}
-
-	// TODO!!!!!
-	resetLink := "https://viittoenliikkuu.fi/reset-password?token=" + token
-
-	err = ms.Send("Nollaa salasana", resetLink, email)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Store) FinishResetPassword(token jwt.Token, newPassword string) error {
-	var email string
-
-	err := token.Get(`email`, &email)
-	if err != nil {
-		return err
-	}
-
-	hash, err := HashPassword(newPassword)
-	if err != nil {
-		return err
-	}
-
-	_, err = s.db.Exec(`
-	UPDATE users
-	SET password_hash = ?
-	WHERE email = ?`, hash, email)
+	_, err := s.db.ExecContext(ctx, query, id)
 
 	if err != nil {
 		return err
@@ -290,8 +147,13 @@ func (s *Store) FinishResetPassword(token jwt.Token, newPassword string) error {
 }
 
 func (s *Store) UserCount() (int, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM users
+	`
+
 	var count int
-	err := s.db.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
+	err := s.db.QueryRow(query).Scan(&count)
 	if err != nil {
 		return 0, err
 	}

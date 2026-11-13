@@ -2,51 +2,50 @@ package main
 
 import (
 	"context"
-	"embed"
 	"errors"
 	"log"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/LukaHietala/viittoen-liikuntapaivakirja/api"
-	"github.com/LukaHietala/viittoen-liikuntapaivakirja/db"
-	"github.com/LukaHietala/viittoen-liikuntapaivakirja/services"
+	"github.com/lukahietala/viittoen-liikuntapaivakirja/api"
+	"github.com/lukahietala/viittoen-liikuntapaivakirja/auth"
+	"github.com/lukahietala/viittoen-liikuntapaivakirja/db"
+	"github.com/lukahietala/viittoen-liikuntapaivakirja/services"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-//go:embed web
-var contentFS embed.FS
-
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	cfg, err := services.LoadEnv()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ms := services.NewMailService(cfg.STMP_SERVER, cfg.STMP_DOMAIN, cfg.STMP_PASSWORD)
-
-	api.InitAuth(cfg.JWTSecret)
-
-	conn, err := db.Connect()
+	conn, err := db.Connect("viittoen.db?_journal_mode=WAL&_foreign_keys=on&_busy_timeout=5000")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to connect to db: %v", err)
 	}
 	defer conn.Close()
-	store := db.NewStore(conn)
 
-	server := &http.Server{
-		Addr:    "0.0.0.0:3000",
-		Handler: api.Serve(contentFS, ms, store),
+	store := db.NewStore(conn)
+	mailService := services.NewMailService(cfg.STMP_SERVER, cfg.STMP_DOMAIN, cfg.STMP_PASSWORD)
+	authService := auth.New(cfg.JWTSecret, store)
+
+	handler := api.NewHandler(store, authService, mailService)
+
+	httpServer := &http.Server{
+		Addr:    ":3000",
+		Handler: handler,
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
 	go func() {
-		log.Printf("listening on %s", server.Addr)
-		err := server.ListenAndServe()
+		log.Printf("listening on %s", httpServer.Addr)
+		err := httpServer.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatal(err)
 		}
@@ -54,10 +53,11 @@ func main() {
 
 	<-ctx.Done()
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Fatal(err)
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		log.Println(err)
 	}
+
 }

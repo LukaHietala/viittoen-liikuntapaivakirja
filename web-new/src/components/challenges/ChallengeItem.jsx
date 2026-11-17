@@ -1,13 +1,20 @@
-import { createSignal, createResource } from "solid-js"
+import { createSignal, createResource } from "solid-js";
 import PerformanceList from "./PerformanceList";
 import ChallengeForm from "../../schemas/ChallengeForm";
+import ConfirmButton from "../common/ConfirmButton";
 import { performanceService } from "../../services";
+import { useAuth } from "../../context/AuthContext";
+import penIcon from "../../assets/pen.svg"
 
 function ChallengeItem(props) {
+		const { user } = useAuth();
 		const challenge = props.challenge;
+		const ownerColor = () => {
+				const u = props.users().find((u)=> u.id === challenge.userId);
+				return u ? u.color : "black";
+		};
 		
-    const [editing, setEditing] = createSignal(false)
-		const [deleting, setDeleting] = createSignal(false);
+		const [editing, setEditing] = createSignal(false)
 		const [showPerformances, setShowPerformances] = createSignal(false)
 
 		const editT = (data) => {
@@ -15,37 +22,45 @@ function ChallengeItem(props) {
 		};
 
 		return (
-        <>
-						{challenge.title}
-            <Show when={editing()}
-									fallback={<button onClick={() => setEditing(true)}>Muokkaa</button>}>
+            <>
+						<div class="hierarchical-item">
+						<div class="item-info">										
+								<div class="laser" style={{"background-color": ownerColor()}}></div>
+								{challenge.title}
+						</div>
+				<div class="item-actions">
+						<button onClick={() => setShowPerformances(!showPerformances())}>
+								Näytä suoritukset
+						</button>
+						<Show when={editing()}
+									fallback={
+											<button class="btn-icon" onClick={() => setEditing(true)}>
+													<img src={penIcon} alt="Muokkaa" />
+											</button>
+									}>
 								<ChallengeForm
 										challenge={() => challenge}
 										onSubmit={editT}
 										cancel={setEditing(false)}
 								/>
-            </Show>
-						<Show when={deleting()}
-									fallback={
-											<button onClick={() => setDeleting(true)}>
-													Poista
-											</button>
-									}>
-								<button onClick={() => setDeleting(false)}>
-										Peru
-								</button>
-								<button onClick={() => props.deleteChallenge(challenge.id)}>
-										Varmista
-								</button>
 						</Show>
-						<button onClick={() => setShowPerformances(!showPerformances())}>Näytä suoritukset</button>
-						<Show when={showPerformances()}>
-								<PerformanceList
-										performances={() => challenge.performances}
-										deletePerformance={props.deletePerformance}
+						<Show
+								when={user() && (user().isAdmin || user().id == challenge.userId)}>
+								<ConfirmButton
+										onClick={() => props.deleteChallenge(challenge.id)}
 								/>
-						</Show>
+						</Show> 
+						
+				</div>
+				</div>
+        <Show when={showPerformances()}>
+            <PerformanceList
+								performances={() => challenge.performances}
+								deletePerformance={props.deletePerformance}
+            />
+        </Show>
         </>
+				
 		);
 }
 

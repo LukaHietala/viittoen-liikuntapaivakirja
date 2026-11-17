@@ -12,16 +12,16 @@ const collectionSchema = v.pipe(
 				description: v.pipe(
 						v.string(),
 						v.minLength(3, "Kuvauksen tulee olla vähintään 3 merkkiä"),
-						v.maxLength(200, "Kuvauksessa voi olla enintään 200 merkkiä"),
+						v.maxLength(2000, "Kuvauksessa voi olla enintään 2000 merkkiä"),
 				),
 				goalPoints: v.pipe(
-						v.toNumber(),
+						v.toNumber("Tavoitepisteet ovat pakollisia"),
 						v.number(),
-						v.integer(),
+						v.integer("Tavoitepisteet voivat olla vain kokonaislukuja"),
 						v.toMinValue(1)
 				),
-				startDate: v.pipe(v.string(), v.isoDate()),
-				endDate: v.pipe(v.string(), v.isoDate()),
+				startDate: v.pipe(v.string(), v.isoDate("Aloituspäivä on pakollinen")),
+				endDate: v.pipe(v.string(), v.isoDate("Lopetuspäivä on pakollinen")),
 		}),
 		v.forward(
 				v.partialCheck(
@@ -31,7 +31,7 @@ const collectionSchema = v.pipe(
 						},
 						"Aloituspäivän tulee olla ennen lopetuspäivää",
 				),
-				["endDate"],
+				["startDate"],
 		),
 );
 
@@ -61,6 +61,7 @@ function CollectionForm(props) {
 						onSubmit={handleSubmit}
 						class="form"
 				>				
+                    <div class="form-block">
 						<Field
 								of={collectionForm}
 								path={["title"]}
@@ -159,7 +160,8 @@ function CollectionForm(props) {
 										</div>
 								)}
 						</Field>
-						
+                    </div>
+                    <div class="form-actions">
 						<button
 								class="btn-secondary"
 								type="button"
@@ -173,6 +175,7 @@ function CollectionForm(props) {
 						>
 								Tallenna
 						</button>
+                    </div>
 				</Form>
 		);
 }

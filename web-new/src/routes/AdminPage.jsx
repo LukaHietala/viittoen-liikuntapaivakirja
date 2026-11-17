@@ -3,6 +3,7 @@ import { createResource, createSignal } from "solid-js";
 import UserForm from "../schemas/UserForm";
 import { userService } from "../services";
 import { useAuth } from "../context/AuthContext.jsx";
+import { toast } from "../scripts/toast.js";
 
 function AdminPage() {
 		const { user } = useAuth();
@@ -22,7 +23,7 @@ function AdminPage() {
 						console.error(e.message);
 				}
 				setAdding(false);
-				// toast(`Lisättiin käyttäjä: ${data.name}`)
+				toast(`Lisättiin käyttäjä: ${data.name}`)
 				await refetchUsers();
 		};
 
@@ -32,7 +33,7 @@ function AdminPage() {
 				} catch (e) {
 						console.error(e.message);
 				}
-				// toast(`Muokattiin käyttäjää: ${data.name}`)
+				toast(`Muokattiin käyttäjää: ${data.name}`)
 				await refetchUsers();
 		};
 
@@ -42,28 +43,36 @@ function AdminPage() {
 				} catch (e) {
 						console.error(e.message);
 				}
-				// toast(`Poistettiin käyttäjä: ${data.name}`)
+				toast("Poistettiin käyttäjä")
 				await refetchUsers();
 		};
 		
 		return (
 				<>
-						<h3>Käyttäjät</h3>
-						<Show when={adding()}
-									fallback={<button onClick={() => setAdding(true)}>Lisää käyttäjä</button>}>
-								<UserForm
-										onSubmit={addUser}
-										user={null}
-										cancel={setAdding(false)}
-								/>
-						</Show>
-						<Suspense fallback={<p>Ladataan...</p>}>
-								<UserList
-										users={users}
-										editUser={editUser}
-										deleteUser={deleteUser}
-								/>
-						</Suspense>
+						<h2>Ylläpito</h2>
+                <Show when={adding()}
+                      fallback={
+                          <div class="block">
+
+															<button onClick={() => setAdding(true)}>
+																	Lisää käyttäjä
+															</button>
+                          </div>
+                      }>
+                    <UserForm
+                        onSubmit={addUser}
+                        user={null}
+                        cancel={setAdding(false)}
+                    />
+                </Show>
+            <h3>Käyttäjät</h3>
+                <Suspense fallback={<p>Ladataan...</p>}>
+                    <UserList
+                        users={users}
+                        editUser={editUser}
+                        deleteUser={deleteUser}
+                    />
+                </Suspense>
 				</>
 		);
 }

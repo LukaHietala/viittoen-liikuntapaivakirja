@@ -97,7 +97,7 @@ func (s *Store) ListCollectionChallenges(ctx context.Context, id int) ([]*Challe
 	query := `
 		SELECT id, title, description, unit, goal_points, start_date, end_date, user_id, collection_id, created_at
 		FROM challenges
-		WHERE collection_id = ?
+		WHERE collection_id  = ?
 	`
 
 	rows, err := s.db.QueryContext(ctx, query, id)
@@ -106,7 +106,7 @@ func (s *Store) ListCollectionChallenges(ctx context.Context, id int) ([]*Challe
 	}
 	defer rows.Close()
 
-	var challenges []*Challenge
+	challenges := make([]*Challenge, 0)
 	for rows.Next() {
 		c := &Challenge{}
 		err := rows.Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints, &c.StartDate, &c.EndDate, &c.UserID, &c.CollectionID, &c.CreatedAt)

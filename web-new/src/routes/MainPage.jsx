@@ -1,16 +1,16 @@
-import ChallengesList from "../components/main/ChallengesList";
+import CollectionList from "../components/main/CollectionList";
 import { createResource } from "solid-js";
-import { challengeService } from "../services";
-import { performanceService } from "../services";
+import { collectionService, performanceService } from "../services";
 import { useAuth } from "../context/AuthContext.jsx";
+import { toast } from "../scripts/toast.js";
 
 function MainPage() {
 		const { user } = useAuth();
 		
-		const [challenges, { refetch: refetchChallenges }] = createResource(
+		const [collections, { refetch: refetchCollections }] = createResource(
 				() => user() && user().id,
 				async () => {
-						return await challengeService.listActive();
+						return await collectionService.listActive();
 				},
 		);
 
@@ -20,17 +20,17 @@ function MainPage() {
 				} catch (e) {
 						console.error(e.message);
 				}
-				// toast(`Lisättiin haaste: ${data.name}`)
-				await refetchChallenges();
+				toast("Lisättiin suoritus");
+				await refetchCollections();
 		};
 		
 		return (
 				<>
-						<h3>Aktiiviset haasteet</h3>
+						<h2>Aktiiviset haasteet</h2>
 						<Suspense fallback={<p>Ladataan...</p>}>
-								<Show when={challenges()}>
-										<ChallengesList
-												challenges={challenges}
+								<Show when={collections()}>
+										<CollectionList
+												collections={collections}
 												addPerformance={addPerformance}
 										/>
 								</Show>

@@ -97,7 +97,7 @@ func (s *Store) ListChallengePerformances(ctx context.Context, id int) ([]*Perfo
 	}
 	defer rows.Close()
 
-	var performances []*Performance
+	performances := make([]*Performance, 0)
 	for rows.Next() {
 		p := &Performance{}
 		err := rows.Scan(&p.ID, &p.Points, &p.UserID, &p.ChallengeID, &p.CreatedAt)

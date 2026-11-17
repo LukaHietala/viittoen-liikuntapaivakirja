@@ -1,8 +1,9 @@
 import CollectionList from "../components/challenges/CollectionList";
 import { createSignal, createResource } from "solid-js";
 import CollectionForm from "../schemas/CollectionForm";
-import { challengeService, collectionService, performanceService } from "../services";
+import { challengeService, collectionService, performanceService, userService } from "../services";
 import { useAuth } from "../context/AuthContext.jsx";
+import { toast } from "../scripts/toast.js";
 
 function ChallengePage() {
 		const { user } = useAuth();
@@ -15,6 +16,13 @@ function ChallengePage() {
 				},
 		);
 
+		const [users] = createResource(
+				() => user() && user().id,
+				async () => {
+						return await userService.listAll();
+				},
+		);
+
 		const addCollection = async (data) => {
 				try {
 						await collectionService.create(data);
@@ -22,7 +30,7 @@ function ChallengePage() {
 						console.error(e.message);
 				}
 				setAdding(false);
-				// toast(`Lisättiin haaste: ${data.name}`)
+				toast(`Lisättiin haaste: ${data.name}`)
 				await refetchCollections();
 		};
 
@@ -32,7 +40,7 @@ function ChallengePage() {
 				} catch (e) {
 						console.error(e.message);
 				}
-				// toast(`Muokattiin haastetta: ${data.name}`)
+				toast(`Muokattiin haastetta: ${data.name}`)
 				await refetchCollections();
 		};
 
@@ -42,19 +50,20 @@ function ChallengePage() {
 				} catch (e) {
 						console.error(e.message);
 				}
-				// toast(`Poistettiin haaste: ${data.name}`)
+				toast("Poistettiin haaste")
 				await refetchCollections();
 		};
 
-		const addChallenge = async (data) => {
+		const addChallenge = async (data, id) => {
 				try {
+						data.collectionId = id
 						await challengeService.create(data);
 				} catch (e) {
 						console.error(e.message);
 				}
 				setAdding(false);
-				// toast(`Lisättiin haaste: ${data.name}`)
-				await refetchChallenges();
+				toast(`Lisättiin haaste: ${data.name}`)
+				await refetchCollections();
 		};
 
 		const editChallenge = async (data, id) => {
@@ -63,8 +72,8 @@ function ChallengePage() {
 				} catch (e) {
 						console.error(e.message);
 				}
-				// toast(`Muokattiin haastetta: ${data.name}`)
-				await refetchChallenges();
+				toast(`Muokattiin haastetta: ${data.name}`)
+				await refetchCollections();
 		};
 
 		const deleteChallenge = async (id) => {
@@ -73,8 +82,8 @@ function ChallengePage() {
 				} catch (e) {
 						console.error(e.message);
 				}
-				// toast(`Poistettiin haaste: ${data.name}`)
-				await refetchChallenges();
+				toast(`Poistettiin haaste: ${data.name}`)
+				await refetchCollections();
 		};
 
 		const deletePerformance = async (id) => {
@@ -83,28 +92,41 @@ function ChallengePage() {
 				} catch (e) {
 						console.error(e.message);
 				}
-				// toast(`Poistettiin suoritus: ${data.name}`)
-				await refetchChallenges();
+				toast("Poistettiin suoritus")
+				await refetchCollections();
 		};
 		
 		return (
 				<>
-						<h3>Haasteet</h3>
-						<Show when={adding()}
-									fallback={<button onClick={() => setAdding(true)}>Lisää isä haaste</button>}>
-								<CollectionForm
-										onSubmit={addCollection}
-										collection={null}
-										cancel={setAdding(false)}
-								/>
-						</Show>
+						<h2>Haasteet</h2>
+            <Show when={adding()}
+                  fallback={
+                      <div class="block">
+                          <button onClick={() => setAdding(true)}>
+                              Luo päähaaste
+                          </button>
+                      </div>
+                  }>
+                <CollectionForm
+                    onSubmit={addCollection}
+                    collection={null}
+                    cancel={setAdding(false)}
+                />
+            </Show>
+            <h3>Päähaasteet</h3>
 						<Suspense fallback={<p>Ladataan...</p>}>
-								<Show when={collections()}>
+								<Show when={collections() && users()}>
 										<CollectionList
 												collections={collections}
+												editCollection={editCollection}
+												deleteCollection={deleteCollection}
+												
+												addChallenge={addChallenge}
 												editChallenge={editChallenge}
 												deleteChallenge={deleteChallenge}
+												
 												deletePerformance={deletePerformance}
+												users={users}
 										/>
 								</Show>
 						</Suspense>

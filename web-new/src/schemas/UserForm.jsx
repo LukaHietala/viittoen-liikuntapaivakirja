@@ -18,9 +18,9 @@ const userSchema = v.pipe(
 				color: v.pipe(
 						v.string(),
 						v.nonEmpty("Valitse väri"),
-						v.hexColor("???"),
+						v.hexColor("Väri ei ole oikeassa formaatissa"),
 				),
-				admin: v.boolean()
+				isAdmin: v.optional(v.boolean(), false),
 		})
 );
 
@@ -50,99 +50,103 @@ function UserForm(props) {
 						onSubmit={handleSubmit}
 						class="form"
 				>				
-						<Field
-								of={userForm}
-								path={["name"]}
-						>
-								{(field) => (
-										<div>
-												<label for={field.props.name}>Nimi:</label>
-												<br />
-												<input
-														{...field.props}
-														id={field.props.name}
-														value={field.input}
-														type="text"
-														required
-												/>
-												{field.errors && <small class="form-error">{field.errors[0]}</small>}
-										</div>
-								)}
-						</Field>
+            <div class="form-block">
+								<Field
+										of={userForm}
+										path={["name"]}
+								>
+										{(field) => (
+												<div>
+														<label for={field.props.name}>Nimi:</label>
+														<br />
+														<input
+																{...field.props}
+																id={field.props.name}
+																value={field.input}
+																type="text"
+																required
+														/>
+														{field.errors && <small class="form-error">{field.errors[0]}</small>}
+												</div>
+										)}
+								</Field>
 
-						<Field
-								of={userForm}
-								path={["email"]}
-						>
-								{(field) => (
-										<div>
-												<label for={field.props.name}>Sähköposti:</label>
-												<br />
-												<input
-														{...field.props}
-														id={field.props.name}
-														value={field.input}
-														type="email"
-														required
-												/>
-												{field.errors && <small class="form-error">{field.errors[0]}</small>}
-										</div>
-								)}
-						</Field>
+								<Field
+										of={userForm}
+										path={["email"]}
+								>
+										{(field) => (
+												<div>
+														<label for={field.props.name}>Sähköposti:</label>
+														<br />
+														<input
+																{...field.props}
+																id={field.props.name}
+																value={field.input}
+																type="email"
+																required
+														/>
+														{field.errors && <small class="form-error">{field.errors[0]}</small>}
+												</div>
+										)}
+								</Field>
+								
+								<Field
+										of={userForm}
+										path={["color"]}
+								>
+										{(field) => (
+												<div>
+														<label for={field.props.name}>Väri:</label>
+														<br />
+														<input
+																{...field.props}
+																id={field.props.name}
+																value={field.input}
+																type="color"
+																required
+														/>
+														{field.errors && <small class="form-error">{field.errors[0]}</small>}
+												</div>
+										)}
+								</Field>
+								
+								<Field
+										of={userForm}
+										path={["isAdmin"]}
+								>
+										{(field) => (
+												<div>
+														<label for={field.props.name}>Yllapitäjä?: </label>
+														<input
+																{...field.props}
+																id={field.props.name}
+																checked={field.input}
+																type="checkbox"
+																required
+																disabled={props.self}
+														/>
+														{field.errors && <small class="form-error">{field.errors[0]}</small>}
+												</div>
+										)}
+								</Field>
+            </div>
 						
-						<Field
-								of={userForm}
-								path={["color"]}
-						>
-								{(field) => (
-										<div>
-												<label for={field.props.name}>Väri:</label>
-												<br />
-												<input
-														{...field.props}
-														id={field.props.name}
-														value={field.input}
-														type="color"
-														required
-												/>
-												{field.errors && <small class="form-error">{field.errors[0]}</small>}
-										</div>
-								)}
-						</Field>
-						
-						<Field
-								of={userForm}
-								path={["admin"]}
-						>
-								{(field) => (
-										<div>
-												<label for={field.props.name}>Yllapito oikeudet:</label>
-												<br/>
-												<input
-														{...field.props}
-														id={field.props.name}
-														value={field.input}
-														type="checkbox"
-														required
-												/>
-												{field.errors && <small class="form-error">{field.errors[0]}</small>}
-										</div>
-								)}
-						</Field>
-						
-						<button
-								class="btn-secondary"
-								type="button"
-								onClick={() => cancel()}
-						>
-								Peruuta
-						</button>
-						<button
-								class="btn-primary"
-								type="submit"
-						>
-								Tallenna
-						</button>
+            <div class="form-actions">
+                <button
+                    class="btn-secondary"
+                    type="button"
+                    onClick={() => cancel()}
+                >
+                    Peruuta
+                </button>
+                <button
+                    class="btn-primary"
+                    type="submit"
+                >
+                    Tallenna
+                </button>
+            </div>
 				</Form>
 		);
 }

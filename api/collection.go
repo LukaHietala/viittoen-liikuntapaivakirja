@@ -90,12 +90,11 @@ func (c *CollectionRequest) Bind(r *http.Request) error {
 
 type CollectionResponse struct {
 	*db.Collection
-	Challenges []*db.Challenge `json:"challenges"`
-	Pot        int             `json:"pot"`
+	Pot int `json:"pot"`
 }
 
-func NewCollectionResponse(collection *db.Collection, challenges []*db.Challenge) *CollectionResponse {
-	return &CollectionResponse{Collection: collection, Challenges: challenges}
+func NewCollectionResponse(collection *db.Collection) *CollectionResponse {
+	return &CollectionResponse{Collection: collection}
 }
 
 func (c *CollectionResponse) Render(w http.ResponseWriter, r *http.Request) error {
@@ -107,16 +106,10 @@ func (c *CollectionResponse) Render(w http.ResponseWriter, r *http.Request) erro
 	return nil
 }
 
-func NewCollectionListResponse(collections []*db.Collection, challenges []*db.Challenge) []render.Renderer {
+func NewCollectionListResponse(collections []*db.Collection) []render.Renderer {
 	list := []render.Renderer{}
 	for _, c := range collections {
-		cc := make([]*db.Challenge, 0)
-		for _, c := range challenges {
-			if c.CollectionID == c.ID {
-				cc = append(cc, c)
-			}
-		}
-		list = append(list, NewCollectionResponse(c, cc))
+		list = append(list, NewCollectionResponse(c))
 	}
 	return list
 }
@@ -153,13 +146,7 @@ func (rs *collectionResource) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	challenges, err := rs.store.ListChallenges(r.Context())
-	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
-	}
-
-	render.RenderList(w, r, NewCollectionListResponse(collections, challenges))
+	render.RenderList(w, r, NewCollectionListResponse(collections))
 }
 
 func (rs *collectionResource) ListActive(w http.ResponseWriter, r *http.Request) {
@@ -169,13 +156,7 @@ func (rs *collectionResource) ListActive(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	challenges, err := rs.store.ListChallenges(r.Context())
-	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
-	}
-
-	render.RenderList(w, r, NewCollectionListResponse(collections, challenges))
+	render.RenderList(w, r, NewCollectionListResponse(collections))
 }
 
 func (rs *collectionResource) Create(w http.ResponseWriter, r *http.Request) {
@@ -206,7 +187,7 @@ func (rs *collectionResource) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	render.Status(r, http.StatusCreated)
-	render.Render(w, r, NewCollectionResponse(newCollection, nil))
+	render.Render(w, r, NewCollectionResponse(newCollection))
 }
 
 func (rs *collectionResource) FindOne(w http.ResponseWriter, r *http.Request) {
@@ -216,13 +197,7 @@ func (rs *collectionResource) FindOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	challenges, err := rs.store.ListCollectionChallenges(r.Context(), collection.ID)
-	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
-	}
-
-	render.Render(w, r, NewCollectionResponse(collection, challenges))
+	render.Render(w, r, NewCollectionResponse(collection))
 }
 
 func (rs *collectionResource) Update(w http.ResponseWriter, r *http.Request) {
@@ -266,7 +241,7 @@ func (rs *collectionResource) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	render.Render(w, r, NewCollectionResponse(currentCollection, nil))
+	render.Render(w, r, NewCollectionResponse(currentCollection))
 }
 
 func (rs *collectionResource) Delete(w http.ResponseWriter, r *http.Request) {
@@ -299,5 +274,5 @@ func (rs *collectionResource) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	render.Render(w, r, NewCollectionResponse(collection, nil))
+	render.Render(w, r, NewCollectionResponse(collection))
 }

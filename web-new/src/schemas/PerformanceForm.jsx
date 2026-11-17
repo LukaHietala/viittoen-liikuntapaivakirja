@@ -27,16 +27,18 @@ function PerformanceForm(props) {
 				<Form
 						of={performanceForm}
 						onSubmit={handleSubmit}
-						class="form"
 				>				
+                    <div class="form-block">
+                        <strong>{props.title}</strong><br/>
+                        <span>{props.description}</span>
+                    </div>
+                    <div class="form-block">
 						<Field
 								of={performanceForm}
 								path={["points"]}
 						>
 								{(field) => (
 										<div>
-												<label for={field.props.name}>Pisteitä:</label>
-												<br />
 												<input
 														{...field.props}
 														id={field.props.name}
@@ -44,24 +46,28 @@ function PerformanceForm(props) {
 														type="number"
 														required
 												/>
+                                                <span>{props.unit}</span>
 												{field.errors && <small class="form-error">{field.errors[0]}</small>}
 										</div>
 								)}
 						</Field>
+                        </div>
 						
-						<button
-								class="btn-secondary"
-								type="button"
-								onClick={() => cancel()}
-						>
-								Peruuta
-						</button>
-						<button
-								class="btn-primary"
-								type="submit"
-						>
-								Tallenna
-						</button>
+                        <div class="form-actions">
+                            <button
+                                    class="btn-secondary"
+                                    type="button"
+                                    onClick={() => cancel()}
+                            >
+                                    Peruuta
+                            </button>
+                            <button
+                                    class="btn-primary"
+                                    type="submit"
+                            >
+                                    Vahvista
+                            </button>
+                        </div>
 				</Form>
 		);
 }

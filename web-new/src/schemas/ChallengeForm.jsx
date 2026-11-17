@@ -36,7 +36,7 @@ const challengeSchema = v.pipe(
 						},
 						"Aloituspäivän tulee olla ennen lopetuspäivää",
 				),
-				["endDate"],
+				["startDate"],
 		),
 );
 
@@ -64,8 +64,11 @@ function ChallengeForm(props) {
 				<Form
 						of={challengeForm}
 						onSubmit={handleSubmit}
-						class="form"
 				>				
+                    <div class="form-block">
+                        <span>{props.title}</span>
+                    </div>
+                    <div class="form-block">
 						<Field
 								of={challengeForm}
 								path={["title"]}
@@ -184,7 +187,9 @@ function ChallengeForm(props) {
 										</div>
 								)}
 						</Field>
+                    </div>
 						
+                    <div class="form-actions"> 
 						<button
 								class="btn-secondary"
 								type="button"
@@ -198,6 +203,7 @@ function ChallengeForm(props) {
 						>
 								Tallenna
 						</button>
+                    </div>
 				</Form>
 		);
 }

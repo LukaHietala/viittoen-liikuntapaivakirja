@@ -1,60 +1,89 @@
 import { createSignal, createResource } from "solid-js"
 import PerformanceList from "./PerformanceList";
 import ChallengeList from "./ChallengeList";
+import CollectionForm from "../../schemas/CollectionForm";
 import ChallengeForm from "../../schemas/ChallengeForm";
+import ConfirmButton from "../common/ConfirmButton";
 import { performanceService } from "../../services";
+import { useAuth } from "../../context/AuthContext";
+import penIcon from "../../assets/pen.svg"
 
 function CollectionItem(props) {
+		const { user } = useAuth();
 		const collection = props.collection;
 
 		const [adding, setAdding] = createSignal(false);
-    const [editing, setEditing] = createSignal(false)
-		const [deleting, setDeleting] = createSignal(false);
+		const [editing, setEditing] = createSignal(false);
+		const [showing, setShowing] = createSignal(false);
 
 		const editT = (data) => {
-				props.editCollection(data, challenge.id);
+				props.editCollection(data, collection.id);
+		};
+
+		const addT = (data) => {
+				props.addChallenge(data, collection.id);
 		};
 
 		return (
-        <>
-						{collection.title}
-            <Show when={editing()}
-									fallback={<button onClick={() => setEditing(true)}>Muokkaa</button>}>
-								moi
-            </Show>
-						<Show when={deleting()}
-									fallback={
-											<button onClick={() => setDeleting(true)}>
-													Poista
-											</button>
-									}>
-								<button onClick={() => setDeleting(false)}>
-										Peru
-								</button>
-								<button onClick={() => props.deleteCollection(challenge.id)}>
-										Varmista
-								</button>
-						</Show>
-						Haasteet:
-						<Show when={adding()}
-									fallback={
-											<button onClick={() => setAdding(true)}>
-													Lisää haaste
-											</button>
-									}>
-								<ChallengeForm
-										onSubmit={props.addChallenge}
-										challenge={null}
-										cancel={setAdding(false)}
-								/>
-						</Show>
-						<ChallengeList
-								challenges={() => collection.challenges}
-								editChallenge={props.editChallenge}
-								deleteChallenge={props.deleteChallenge}
-								deletePerformance={props.deletePerformance}
-						/>
-        </>
+						<>
+								<div class="hierarchical-list">
+										<div class="hierarchical-item">
+												<div class="item-info">
+														<strong>{collection.title}</strong>
+												</div>
+												<div class="item-actions">
+														<button onClick={() => setShowing(!showing())}>
+																Näytä haasteet
+														</button>
+														<Show when={editing()}
+																	fallback={
+																			<button class="btn-icon" onClick={() => setEditing(true)}>
+																					<img src={penIcon} alt="Muokkaa" />
+																			</button>
+																	}>
+																<CollectionForm
+																		collection={() => collection}
+																		onSubmit={editT}
+																		cancel={setEditing(false)}
+																/>
+														</Show>
+														<Show when={user() && (user().isAdmin || user().id == collection.userId)}>
+																<ConfirmButton
+																		onClick={() => props.deleteCollection(collection.id)}
+																/>
+														</Show>
+												</div>
+										</div>
+
+										<Show when={showing()}>
+												<Show when={adding()} fallback={
+																	<div class="hierarchical-item">
+																			<div></div>
+																			<div class="item-actions">
+																					<button onClick={() => setAdding(!adding())}>
+																							Lisää alihaaste
+																					</button>
+																			</div>
+																	</div>
+															}>
+														<ChallengeForm
+																title="Lisätään alihaaste..."
+																onSubmit={addT}
+																challenge={null}
+																cancel={setAdding(false)}
+														/>
+												</Show>
+												
+												<ChallengeList
+														challenges={() => collection.challenges}
+														editChallenge={props.editChallenge}
+														deleteChallenge={props.deleteChallenge}
+														deletePerformance={props.deletePerformance}
+														users={props.users}
+												/>
+										</Show>
+								</div>
+						</>
 		);
 }
 

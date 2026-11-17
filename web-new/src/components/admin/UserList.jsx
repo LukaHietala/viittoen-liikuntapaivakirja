@@ -2,7 +2,7 @@ import UserItem from "./UserItem.jsx";
 
 function UserList(props) {
     return (
-        <div>
+        <div class="list">
             <For each={props.users()}>{(item) =>
                 <UserItem
 										user={item}

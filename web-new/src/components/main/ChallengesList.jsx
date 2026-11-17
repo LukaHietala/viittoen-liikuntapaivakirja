@@ -2,17 +2,19 @@ import ChallengesItem from "./ChallengesItem.jsx";
 
 function ChallengesList(props) {
     return (
-        <div>
-            <For each={props.challenges()}>{(item) =>
-                <ChallengesItem
+				<>
+						<For each={props.challenges()}>{(item) =>
+								<ChallengesItem
 										addPerformance={props.addPerformance}
 										challenge={item}
-										/>
-            }</For>
+								/>
+						}</For>
 						<Show when={props.challenges().length == 0}>
+                            <div class="hierarchical-item">
 								Ei aktiivisia haasteita
+                            </div>
 						</Show>
-        </div>
+				</>
     );
 }
 

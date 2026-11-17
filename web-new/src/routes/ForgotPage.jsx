@@ -1,6 +1,5 @@
 import ForgotForm from "../schemas/ForgotForm";
 import { createResource, createSignal } from "solid-js";
-//import { challengeService } from "../services";
 
 function ForgotPage() {
 		const [sent, setSent] = createSignal(false);

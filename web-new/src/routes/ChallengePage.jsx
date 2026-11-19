@@ -27,7 +27,7 @@ function ChallengePage() {
 				try {
 						await collectionService.create(data);
 				} catch (e) {
-						console.error(e.message);
+						toast(e.message);
 				}
 				setAdding(false);
 				toast(`Lisättiin haaste: ${data.name}`)
@@ -38,7 +38,7 @@ function ChallengePage() {
 				try {
 						await collectionService.updateByID(id, data);
 				} catch (e) {
-						console.error(e.message);
+						toast(e.message);
 				}
 				toast(`Muokattiin haastetta: ${data.name}`)
 				await refetchCollections();
@@ -48,7 +48,7 @@ function ChallengePage() {
 				try {
 						await collectionService.deleteByID(id);
 				} catch (e) {
-						console.error(e.message);
+						toast(e.message);
 				}
 				toast("Poistettiin haaste")
 				await refetchCollections();
@@ -59,7 +59,7 @@ function ChallengePage() {
 						data.collectionId = id
 						await challengeService.create(data);
 				} catch (e) {
-						console.error(e.message);
+						toast(e.message);
 				}
 				setAdding(false);
 				toast(`Lisättiin haaste: ${data.name}`)
@@ -70,7 +70,7 @@ function ChallengePage() {
 				try {
 						await challengeService.updateByID(id, data);
 				} catch (e) {
-						console.error(e.message);
+						toast(e.message);
 				}
 				toast(`Muokattiin haastetta: ${data.name}`)
 				await refetchCollections();
@@ -80,7 +80,7 @@ function ChallengePage() {
 				try {
 						await challengeService.deleteByID(id);
 				} catch (e) {
-						console.error(e.message);
+						toast(e.message);
 				}
 				toast(`Poistettiin haaste: ${data.name}`)
 				await refetchCollections();
@@ -90,7 +90,7 @@ function ChallengePage() {
 				try {
 						await performanceService.deleteByID(id);
 				} catch (e) {
-						console.error(e.message);
+						toast(e.message);
 				}
 				toast("Poistettiin suoritus")
 				await refetchCollections();

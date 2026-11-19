@@ -10,7 +10,12 @@ function PerformanceList(props) {
 										challenges={props.challenges}
 										deletePerformance={props.deletePerformance}
 								/>
-            }</For>
+										 }</For>
+						<Show when={props.performances().length == 0}>
+                <div class="item">
+										Ei suorituksia
+                </div>
+						</Show>
         </div>
     );
 }

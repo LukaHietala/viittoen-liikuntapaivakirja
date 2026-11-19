@@ -1,12 +1,21 @@
 import ForgotForm from "../schemas/ForgotForm";
+import { authService } from "../services";
 import { createResource, createSignal } from "solid-js";
+import { toast } from "../scripts/toast.js"
 
 function ForgotPage() {
 		const [sent, setSent] = createSignal(false);
 
-		const sendEmail = (data) => {
-				const email = data.email;
-				setSent(true);
+		const sendEmail = async (data) => {
+            let success = true
+                try {
+                    await authService.forgotPassword(data);
+                } catch (e) {
+                    success = false
+                    toast(e.message) 
+                }
+            if (success)
+                setSent(true)
 		}
 		
 		return (
@@ -14,13 +23,15 @@ function ForgotPage() {
 						<Show when={sent()}
 									fallback={
 											<>
-													<h3>SÄkhöpoisti!!</h3>
+													<h3>Salasanan nollaus</h3>
 													<ForgotForm
 															onSubmit={sendEmail}
 													/>
 											</>
 									}>
-								Sähköposti lähetetty, moi
+                                <div class="block">
+                                    <span>Nollauslinkin sisältävä sähköposti lähetetty</span>
+                                </div>
 						</Show>
 				</>
 		);

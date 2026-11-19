@@ -20,7 +20,7 @@ function AdminPage() {
 				try {
 						await userService.create(data);
 				} catch (e) {
-						console.error(e.message);
+						toast(e.message);
 				}
 				setAdding(false);
 				toast(`Lisättiin käyttäjä: ${data.name}`)
@@ -31,7 +31,7 @@ function AdminPage() {
 				try {
 						await userService.updateByID(id, data);
 				} catch (e) {
-						console.error(e.message);
+						toast(e.message);
 				}
 				toast(`Muokattiin käyttäjää: ${data.name}`)
 				await refetchUsers();
@@ -41,7 +41,7 @@ function AdminPage() {
 				try {
 						await userService.deleteByID(id);
 				} catch (e) {
-						console.error(e.message);
+						toast(e.message);
 				}
 				toast("Poistettiin käyttäjä")
 				await refetchUsers();

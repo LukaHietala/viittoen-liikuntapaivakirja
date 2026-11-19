@@ -26,26 +26,26 @@ function CollectionItem(props) {
 
 		return (
 						<>
-								<div class="hierarchical-list">
+								<div class="hierarchical-list active">
 										<div class="hierarchical-item">
 												<div class="item-info">
-														<strong>{collection.title}</strong>
+                            <div>
+																<span>{collection.title}</span><br />
+                                <span class="small">
+																		Pisteet: {collection.pot} / {collection.goalPoints} -
+																		Ajanjakso: {collection.startDate} -
+																		{collection.endDate}
+																</span> 
+                            </div>
 												</div>
 												<div class="item-actions">
 														<button onClick={() => setShowing(!showing())}>
-																Näytä haasteet
+																Näytä alihaasteet
 														</button>
-														<Show when={editing()}
-																	fallback={
-																			<button class="btn-icon" onClick={() => setEditing(true)}>
-																					<img src={penIcon} alt="Muokkaa" />
-																			</button>
-																	}>
-																<CollectionForm
-																		collection={() => collection}
-																		onSubmit={editT}
-																		cancel={setEditing(false)}
-																/>
+														<Show when={!editing()}>
+																<button class="btn-icon" onClick={() => setEditing(true)}>
+																		<img src={penIcon} alt="Muokkaa" />
+																</button>	
 														</Show>
 														<Show when={user() && (user().isAdmin || user().id == collection.userId)}>
 																<ConfirmButton
@@ -54,7 +54,14 @@ function CollectionItem(props) {
 														</Show>
 												</div>
 										</div>
-
+										<Show when={editing()}>
+												<CollectionForm
+														title={`Muokataan: ${collection.title}`}
+														collection={() => collection}
+														onSubmit={editT}
+														cancel={setEditing(false)}
+												/>
+										</Show>
 										<Show when={showing()}>
 												<Show when={adding()} fallback={
 																	<div class="hierarchical-item">

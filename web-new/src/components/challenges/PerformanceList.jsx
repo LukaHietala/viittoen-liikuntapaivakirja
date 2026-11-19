@@ -8,6 +8,7 @@ function PerformanceList(props) {
 												 <PerformanceItem
 														 performance={item}
 														 deletePerformance={props.deletePerformance}
+														 users={props.users}
 												 />
 										 }</For>
 						<Show when={props.performances().length == 0}>

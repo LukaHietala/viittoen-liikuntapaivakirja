@@ -27,7 +27,7 @@ function UserItem(props) {
 				>
 						<div class="item">
 								<div class="item-info">
-										<strong>{cuser.name}</strong>
+										<span>{cuser.name}</span>
 										<Show when={cuser.id === user().id}>
 												<span class="badge">Sinä</span>
 										</Show>

@@ -1,6 +1,7 @@
 import { authService } from "../services";
 import { useNavigate } from "@solidjs/router";
 import { useAuth } from "../context/AuthContext.jsx";
+import { toast } from "../scripts/toast.js";
 
 function LogoutPage() {
 		const navigate = useNavigate();
@@ -10,7 +11,7 @@ function LogoutPage() {
 				try {
 						await authService.logout();
 				} catch (e) {
-						console.error(e.message);
+						toast(e.message);
 				} finally {
 						await refetch();
 						navigate("/login", { replace: true });
@@ -18,10 +19,12 @@ function LogoutPage() {
 		};
 
 		return (
-				<>
-						<p>Logout?</p>
-						<button onClick={handleLogout}>Yes</button>
-				</>
+            <>
+                <h2>Kirjaudu ulos?</h2>
+				<div class="block">
+						<button onClick={handleLogout}>Kyllä</button>
+				</div>
+            </>
 		);
 }
 

@@ -14,7 +14,9 @@ function ChallengeList(props) {
             }</For>
             <Show when={props.challenges().length == 0}>
                 <div class="hierarchical-item">
-                    Ei haasteita
+                    <div class="item-info">
+                    <span>Ei haasteita</span>
+                    </div>
                 </div>
             </Show>
         </>

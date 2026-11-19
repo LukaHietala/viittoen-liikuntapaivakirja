@@ -24,7 +24,7 @@ function ProfilePage() {
 				try {
 						await performanceService.deleteByID(id);
 				} catch (e) {
-						console.error(e.message);
+						toast(e.message);
 				}
 				toast(`Poistettiin suoritus`)
 				await refetchPerformances();

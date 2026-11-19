@@ -1,4 +1,3 @@
-import { createSignal, createResource } from "solid-js";
 import ChallengesList from "./ChallengesList";
 
 function CollectionItem(props) {
@@ -6,12 +5,19 @@ function CollectionItem(props) {
 
 		return (
 				<>
-						<div class="hierarchical-list">
+						<div class="hierarchical-list active">
 								<div class="hierarchical-item">
 										<div class="item-info">
-												<strong>
-														{collection.title}
-												</strong>
+												<div>
+														<strong>
+																{collection.title}
+														</strong>
+														<br/>
+														<span class="small">
+																Pisteet: {collection.pot} / {collection.goalPoints} -
+																Ajanjakso: {collection.startDate} - {collection.endDate}
+														</span>
+												</div>
 										</div>
 										<progress
 												max={collection.goalPoints}
@@ -21,6 +27,7 @@ function CollectionItem(props) {
 								<ChallengesList
 										challenges={() => collection.challenges}
 										addPerformance={props.addPerformance}
+										users={props.users}
 								/>
 						</div>
 				</>

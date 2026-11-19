@@ -118,11 +118,11 @@ func (s *Store) AddUser(ctx context.Context, user *User) error {
 func (s *Store) UpdateUser(ctx context.Context, user *User) error {
 	query := `
     	UPDATE users
-		SET name = ?, email = ?, is_admin = ?, color = ?
+		SET name = ?, email = ?, password_hash = ?, is_admin = ?, color = ?
 		WHERE id = ?
     `
 
-	_, err := s.db.ExecContext(ctx, query, user.Name, user.Email, user.IsAdmin, user.Color, user.ID)
+	_, err := s.db.ExecContext(ctx, query, user.Name, user.Email, user.PasswordHash, user.IsAdmin, user.Color, user.ID)
 
 	if err != nil {
 		return err

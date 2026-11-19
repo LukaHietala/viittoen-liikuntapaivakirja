@@ -22,43 +22,58 @@ function ChallengeItem(props) {
 		};
 
 		return (
-            <>
+        <>
 						<div class="hierarchical-item">
-						<div class="item-info">										
-								<div class="laser" style={{"background-color": ownerColor()}}></div>
-								{challenge.title}
+								<div class="item-info">										
+										<div class="laser" style={{"background-color": ownerColor()}}></div>
+                    <div>
+                        {/*TODO, TILA: Aktiivinen/vanhentunut/odottaa*/}
+                        <div>
+                            <span>{challenge.title}</span><br />
+                            <span class="small">
+																Pisteet: { challenge.performances.
+																					 reduce((sum, x) => sum + x.points, 0)
+																				 }  /
+																{challenge.goalPoints} -
+																Ajanjakso: {challenge.startDate} - {challenge.endDate}
+														</span>
+                        </div>
+                    </div>
+								</div>
+								<div class="item-actions">
+										<button onClick={() => setShowPerformances(!showPerformances())}>
+												Näytä suoritukset
+										</button>
+										<Show when={!editing()}>
+												<button class="btn-icon" onClick={() => setEditing(true)}>
+														<img src={penIcon} alt="Muokkaa" />
+												</button>
+										</Show>
+                    {/* TODO: Piilota muut napit kun confirm tilassa */}
+										<Show
+												when={user() && (user().isAdmin || user().id == challenge.userId)}>
+												<ConfirmButton
+														onClick={() => props.deleteChallenge(challenge.id)}
+												/>
+										</Show> 
+										
+								</div>
 						</div>
-				<div class="item-actions">
-						<button onClick={() => setShowPerformances(!showPerformances())}>
-								Näytä suoritukset
-						</button>
-						<Show when={editing()}
-									fallback={
-											<button class="btn-icon" onClick={() => setEditing(true)}>
-													<img src={penIcon} alt="Muokkaa" />
-											</button>
-									}>
+						<Show when={editing()}>
 								<ChallengeForm
+										title={`Muokataan: ${challenge.title}`}
 										challenge={() => challenge}
 										onSubmit={editT}
 										cancel={setEditing(false)}
 								/>
 						</Show>
-						<Show
-								when={user() && (user().isAdmin || user().id == challenge.userId)}>
-								<ConfirmButton
-										onClick={() => props.deleteChallenge(challenge.id)}
+						<Show when={showPerformances()}>
+								<PerformanceList
+										performances={() => challenge.performances}
+										deletePerformance={props.deletePerformance}
+										users={props.users}
 								/>
-						</Show> 
-						
-				</div>
-				</div>
-        <Show when={showPerformances()}>
-            <PerformanceList
-								performances={() => challenge.performances}
-								deletePerformance={props.deletePerformance}
-            />
-        </Show>
+						</Show>
         </>
 				
 		);

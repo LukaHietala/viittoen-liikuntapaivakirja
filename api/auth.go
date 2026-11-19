@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
 	"github.com/lukahietala/viittoen-liikuntapaivakirja/auth"
 	"github.com/lukahietala/viittoen-liikuntapaivakirja/db"
@@ -34,6 +35,8 @@ func (rs *authResource) Routes() chi.Router {
 
 	r.Post("/logout", rs.Logout)
 	r.Get("/self", rs.Self)
+	r.Post("/forgot", rs.ForgotPassword)
+	r.Post("/reset", rs.ResetPassword)
 
 	return r
 }
@@ -91,7 +94,7 @@ func (rs *authResource) Login(w http.ResponseWriter, r *http.Request) {
 		Value: token,
 	})
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (rs *authResource) Logout(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +108,7 @@ func (rs *authResource) Logout(w http.ResponseWriter, r *http.Request) {
 		Value: "",
 	})
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 type SelfResponse struct {
@@ -195,7 +198,7 @@ func (rs *authResource) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	err = rs.mail.Send("Nollaa salasana", resetLink, user.Email)
 
 	// TODO: Send email
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 type ResetRequest struct {
@@ -209,7 +212,11 @@ func (re *ResetRequest) Bind(r *http.Request) error {
 	if re.NewPassword == "" {
 		return errors.New("uusi salasana on pakollinen")
 	}
-	// TODO: token validation
+	if re.Token == "" {
+		return errors.New("linkki on virheellinen")
+	}
+
+	// Token validation is done locally
 
 	return nil
 }
@@ -221,7 +228,13 @@ func (rs *authResource) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := rs.auth.JWTAuth.Decode(data.Token)
+	_, err := rs.auth.JWTAuth.Decode(data.Token)
+	if err != nil {
+		render.Render(w, r, ErrInvalidRequest(errors.New("linkki on virheellinen")))
+		return
+	}
+
+	token, err := jwtauth.VerifyToken(rs.auth.JWTAuth, data.Token)
 	if err != nil {
 		render.Render(w, r, ErrInvalidRequest(errors.New("linkki on vanhentunut")))
 		return
@@ -231,7 +244,7 @@ func (rs *authResource) ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	err = token.Get(`email`, &email)
 	if err != nil {
-		render.Render(w, r, ErrInvalidRequest(err))
+		render.Render(w, r, ErrInvalidRequest(errors.New("linkki on virheellinen")))
 		return
 	}
 
@@ -241,7 +254,10 @@ func (rs *authResource) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user.SetPasswordHash(data.NewPassword)
+	if err := user.SetPasswordHash(data.NewPassword); err != nil {
+		render.Render(w, r, ErrInternal(err))
+		return
+	}
 
 	if err := rs.store.UpdateUser(r.Context(), user); err != nil {
 		render.Render(w, r, ErrInternal(err))

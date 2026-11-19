@@ -33,58 +33,61 @@ function LoginForm(props) {
 						of={loginForm}
 						onSubmit={handleSubmit}
 						class="form"
-				>				
-						<Field
-								of={loginForm}
-								path={["name"]}
-						>
-								{(field) => (
-										<div>
-												<label for={field.props.name}>Nimi:</label>
-												<br />
-												<input
-														{...field.props}
-														id={field.props.name}
-														value={field.input}
-														type="text"
-														required
-												/>
-												{field.errors && <small class="form-error">{field.errors[0]}</small>}
-										</div>
-								)}
-						</Field>
+				>
+						<div style="padding: 15px;">
+								<Field
+										of={loginForm}
+										path={["name"]}
+								>
+										{(field) => (
+												<div>
+														<label for={field.props.name}>Nimi:</label>
+														<br />
+														<input
+																{...field.props}
+																id={field.props.name}
+																value={field.input}
+																type="text"
+																required
+														/>
+														{field.errors && <small class="form-error">{field.errors[0]}</small>}
+												</div>
+										)}
+								</Field>
 
-						<Field
-								of={loginForm}
-								path={["password"]}
-						>
-								{(field) => (
-										<div>
-												<label for={field.props.name}>Salasana:</label>
-												<br />
-												<input
-														{...field.props}
-														id={field.props.name}
-														value={field.input}
-														type="password"
-														required
-												/>
-												{field.errors && <small class="form-error">{field.errors[0]}</small>}
-										</div>
-								)}
-						</Field>
-						
-						<button
-								class="btn-primary"
-								type="submit"
-						>
-								Kirjaudu
-						</button>
-						<button
-								onClick={() => navigate("/forgot")}
-								type="button" >
-								unohditko salasani?
-						</button>
+								<Field
+										of={loginForm}
+										path={["password"]}
+								>
+										{(field) => (
+												<div>
+														<label for={field.props.name}>Salasana:</label>
+														<br />
+														<input
+																{...field.props}
+																id={field.props.name}
+																value={field.input}
+																type="password"
+																required
+														/>
+														{field.errors && <small class="form-error">{field.errors[0]}</small>}
+												</div>
+										)}
+								</Field>
+						</div>
+						<div style="padding: 15px; border-top: 1px solid var(--border);">
+								<button
+										style="margin-right: 10px;"
+										class="btn-primary"
+										type="submit"
+								>
+										Kirjaudu
+								</button>
+								
+								<a href="/forgot">
+										Unohditko salasanasi?
+								</a>
+						</div>
 				</Form>
 		);
 }

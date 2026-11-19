@@ -7,7 +7,7 @@ export default function AnonymousRoute(props) {
 		const { user } = useAuth();
 
 		createEffect(() => {
-				if (!user.loading && user() !== null) {
+				if (!user.loading && user()) {
 						navigate("/", { replace: true });
 				}
 		});

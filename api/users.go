@@ -161,8 +161,7 @@ func (rs *userResource) Create(w http.ResponseWriter, r *http.Request) {
 		"Sinulle on luotu uusi käyttäjä Viittoenliikkuu sovellukseen\n\nNimi: %s\nSalasana: %s\n", data.Name, password,
 	)
 	if err := rs.mail.Send("Tunnukset viittoenliikkuu.fi", body, data.Email); err != nil {
-		// TODO: VALITA
-		render.Render(w, r, ErrInternal(err))
+		render.Render(w, r, ErrInvalidRequest(errors.New("sähköpostin lähettäminen ei onnistunut")))
 		return
 	}
 

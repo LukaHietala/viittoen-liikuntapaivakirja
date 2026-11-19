@@ -7,12 +7,13 @@ function ChallengesList(props) {
 								<ChallengesItem
 										addPerformance={props.addPerformance}
 										challenge={item}
+										users={props.users}
 								/>
 						}</For>
 						<Show when={props.challenges().length == 0}>
-                            <div class="hierarchical-item">
-								Ei aktiivisia haasteita
-                            </div>
+                <div class="hierarchical-item">
+										Ei aktiivisia haasteita
+                </div>
 						</Show>
 				</>
     );

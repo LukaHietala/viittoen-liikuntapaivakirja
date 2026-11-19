@@ -7,6 +7,7 @@ function CollectionList(props) {
 								<CollectionItem
 										collection={item}
 										addPerformance={props.addPerformance}
+										users={props.users}
 								/>
 						}</For>
 						<Show when={props.collections().length == 0}>

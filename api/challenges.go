@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,15 +14,17 @@ import (
 	"github.com/go-chi/render"
 	"github.com/lukahietala/viittoen-liikuntapaivakirja/auth"
 	"github.com/lukahietala/viittoen-liikuntapaivakirja/db"
+	"github.com/lukahietala/viittoen-liikuntapaivakirja/services"
 )
 
 type challengeResource struct {
 	store *db.Store
 	auth  *auth.Auth
+	mail  *services.MailService
 }
 
-func NewChallengeResource(s *db.Store, a *auth.Auth) *challengeResource {
-	return &challengeResource{store: s, auth: a}
+func NewChallengeResource(s *db.Store, a *auth.Auth, m *services.MailService) *challengeResource {
+	return &challengeResource{store: s, auth: a, mail: m}
 }
 
 func (rs *challengeResource) Routes() chi.Router {
@@ -46,7 +49,6 @@ type ChallengeRequest struct {
 	Title        string `json:"title"`
 	Description  string `json:"description"`
 	Unit         string `json:"unit"`
-	GoalPoints   int    `json:"goalPoints"`
 	StartDate    string `json:"startDate"`
 	EndDate      string `json:"endDate"`
 	CollectionID int    `json:"collectionId"`
@@ -76,10 +78,6 @@ func (c *ChallengeRequest) Bind(r *http.Request) error {
 	}
 	if utf8.RuneCountInString(c.Unit) > 20 {
 		return errors.New("haasteen suoritusyksikkö on liian pitkä (max 20)")
-	}
-
-	if c.GoalPoints < 1 {
-		return errors.New("haasteen tavoitepisteet tulee olla yli 1")
 	}
 
 	start, err := time.Parse(time.DateOnly, c.StartDate)
@@ -201,7 +199,6 @@ func (rs *challengeResource) Create(w http.ResponseWriter, r *http.Request) {
 		Title:        data.Title,
 		Description:  data.Description,
 		Unit:         data.Unit,
-		GoalPoints:   data.GoalPoints,
 		StartDate:    data.StartDate,
 		EndDate:      data.EndDate,
 		UserID:       userID,
@@ -211,6 +208,14 @@ func (rs *challengeResource) Create(w http.ResponseWriter, r *http.Request) {
 	if err := rs.store.AddChallenge(r.Context(), newChallenge); err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
+	}
+
+	users, err := rs.store.ListUsers(r.Context())
+	if err == nil {
+		// TODO: handle err if needed
+		for _, user := range users {
+			_ = rs.mail.Send("Uusi pikahaaste", fmt.Sprintf("Uusi pikahaaste \"%s\" luotiin.\nAjanjakso: %s - %s", data.Title, data.StartDate, data.EndDate), user.Email)
+		}
 	}
 
 	render.Status(r, http.StatusCreated)
@@ -249,7 +254,6 @@ func (rs *challengeResource) Update(w http.ResponseWriter, r *http.Request) {
 	currentChallenge.Title = data.Title
 	currentChallenge.Description = data.Description
 	currentChallenge.Unit = data.Unit
-	currentChallenge.GoalPoints = data.GoalPoints
 	currentChallenge.StartDate = data.StartDate
 	currentChallenge.EndDate = data.EndDate
 

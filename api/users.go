@@ -33,12 +33,15 @@ func (rs *userResource) Routes() chi.Router {
 	r.Use(rs.auth.Authenticator())
 
 	r.Get("/", rs.List)
-	r.Post("/", rs.Create)
+	r.Group(func(r chi.Router) {
+		r.Use(rs.auth.AdminOnly)
+		r.Post("/", rs.Create)
 
-	r.Route("/{userID}", func(r chi.Router) {
-		r.Use(rs.UserCtx)
-		r.Put("/", rs.Update)
-		r.Delete("/", rs.Delete)
+		r.Route("/{userID}", func(r chi.Router) {
+			r.Use(rs.UserCtx)
+			r.Put("/", rs.Update)
+			r.Delete("/", rs.Delete)
+		})
 	})
 
 	return r
@@ -152,6 +155,17 @@ func (rs *userResource) Create(w http.ResponseWriter, r *http.Request) {
 	password := fmt.Sprintf("%x", b)[2 : length+2]
 	newUser.SetPasswordHash(password)
 
+	user, err := rs.store.FindUserByEmail(r.Context(), newUser.Email)
+	if err != nil && !errors.Is(err, db.ErrUserNotFound) {
+		render.Render(w, r, ErrInternal(err))
+		return
+	}
+
+	if user != nil {
+		render.Render(w, r, ErrInvalidRequest(errors.New("sähköposti on jo käytössä")))
+		return
+	}
+
 	if err := rs.store.AddUser(r.Context(), newUser); err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
@@ -189,6 +203,17 @@ func (rs *userResource) Update(w http.ResponseWriter, r *http.Request) {
 
 	if data.Password != "" {
 		currentUser.SetPasswordHash(data.Password)
+	}
+
+	user, err := rs.store.FindUserByEmail(r.Context(), currentUser.Email)
+	if err != nil && !errors.Is(err, db.ErrUserNotFound) {
+		render.Render(w, r, ErrInternal(err))
+		return
+	}
+
+	if user != nil && user.ID != currentUser.ID {
+		render.Render(w, r, ErrInvalidRequest(errors.New("sähköposti on jo käytössä")))
+		return
 	}
 
 	if err := rs.store.UpdateUser(r.Context(), currentUser); err != nil {

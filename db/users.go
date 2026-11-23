@@ -38,14 +38,14 @@ func (s *Store) ListUsers(ctx context.Context) ([]*User, error) {
 
 func (s *Store) FindUserByID(ctx context.Context, id int) (*User, error) {
 	query := `
-		SELECT id, name, email, is_admin, color
+		SELECT id, name, email, password_hash, is_admin, color
 		FROM users
 		WHERE id = ? LIMIT 1
 	`
 
 	var user User
 	err := s.db.QueryRowContext(ctx, query, id).
-		Scan(&user.ID, &user.Name, &user.Email, &user.IsAdmin, &user.Color)
+		Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.IsAdmin, &user.Color)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w; id: %d", ErrUserNotFound, id)

@@ -24,7 +24,6 @@ type Challenge struct {
 	Title        string `json:"title"`
 	Description  string `json:"description"`
 	Unit         string `json:"unit"`
-	GoalPoints   int    `json:"goalPoints"`
 	StartDate    string `json:"startDate"`
 	EndDate      string `json:"endDate"`
 	CreatedAt    string `json:"createdAt"`

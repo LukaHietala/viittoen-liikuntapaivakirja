@@ -28,11 +28,7 @@ func NewAuthResource(s *db.Store, a *auth.Auth, m *services.MailService) *authRe
 func (rs *authResource) Routes() chi.Router {
 	r := chi.NewRouter()
 
-	r.Group(func(r chi.Router) {
-		r.Use(rs.auth.RejectAuthenticated)
-		r.Post("/login", rs.Login)
-	})
-
+	r.Post("/login", rs.Login)
 	r.Post("/logout", rs.Logout)
 	r.Get("/self", rs.Self)
 	r.Post("/forgot", rs.ForgotPassword)
@@ -74,7 +70,7 @@ func (rs *authResource) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if ok := user.Verify(data.Password); !ok {
-		render.Render(w, r, ErrInvalidRequest(errors.New("nimi tai salasana on väärä")))
+		render.Render(w, r, ErrInvalidRequest(errors.New("Salasana on väärä")))
 		return
 	}
 

@@ -14,7 +14,7 @@ var (
 
 func (s *Store) ListChallenges(ctx context.Context) ([]*Challenge, error) {
 	query := `
-		SELECT id, title, description, unit, goal_points, start_date, end_date, user_id, collection_id, created_at
+		SELECT id, title, description, unit, start_date, end_date, user_id, collection_id, created_at
 		FROM challenges
 	`
 
@@ -27,7 +27,7 @@ func (s *Store) ListChallenges(ctx context.Context) ([]*Challenge, error) {
 	var challenges []*Challenge
 	for rows.Next() {
 		c := &Challenge{}
-		err := rows.Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints, &c.StartDate, &c.EndDate, &c.UserID, &c.CollectionID, &c.CreatedAt)
+		err := rows.Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.StartDate, &c.EndDate, &c.UserID, &c.CollectionID, &c.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -47,7 +47,7 @@ func (s *Store) ListChallenges(ctx context.Context) ([]*Challenge, error) {
 
 func (s *Store) ListActiveChallenges(ctx context.Context) ([]*Challenge, error) {
 	query := `
-		SELECT id, title, description, unit, goal_points, start_date, end_date, user_id, collection_id, created_at
+		SELECT id, title, description, unit, start_date, end_date, user_id, collection_id, created_at
 		FROM challenges
 	`
 
@@ -60,7 +60,7 @@ func (s *Store) ListActiveChallenges(ctx context.Context) ([]*Challenge, error) 
 	var challenges []*Challenge
 	for rows.Next() {
 		c := &Challenge{}
-		err := rows.Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints, &c.StartDate, &c.EndDate, &c.UserID, &c.CollectionID, &c.CreatedAt)
+		err := rows.Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.StartDate, &c.EndDate, &c.UserID, &c.CollectionID, &c.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +95,7 @@ func (s *Store) ListActiveChallenges(ctx context.Context) ([]*Challenge, error) 
 
 func (s *Store) ListCollectionChallenges(ctx context.Context, id int) ([]*Challenge, error) {
 	query := `
-		SELECT id, title, description, unit, goal_points, start_date, end_date, user_id, collection_id, created_at
+		SELECT id, title, description, unit, start_date, end_date, user_id, collection_id, created_at
 		FROM challenges
 		WHERE collection_id  = ?
 	`
@@ -109,7 +109,7 @@ func (s *Store) ListCollectionChallenges(ctx context.Context, id int) ([]*Challe
 	challenges := make([]*Challenge, 0)
 	for rows.Next() {
 		c := &Challenge{}
-		err := rows.Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.GoalPoints, &c.StartDate, &c.EndDate, &c.UserID, &c.CollectionID, &c.CreatedAt)
+		err := rows.Scan(&c.ID, &c.Title, &c.Description, &c.Unit, &c.StartDate, &c.EndDate, &c.UserID, &c.CollectionID, &c.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -129,14 +129,14 @@ func (s *Store) ListCollectionChallenges(ctx context.Context, id int) ([]*Challe
 
 func (s *Store) FindChallengeByID(ctx context.Context, id int) (*Challenge, error) {
 	query := `
-		SELECT id, title, description, unit, goal_points, start_date, end_date, user_id, collection_id, created_at
+		SELECT id, title, description, unit, start_date, end_date, user_id, collection_id, created_at
 		FROM challenges
 		WHERE id = ? LIMIT 1
 	`
 
 	var challenge Challenge
 	err := s.db.QueryRowContext(ctx, query, id).
-		Scan(&challenge.ID, &challenge.Title, &challenge.Description, &challenge.Unit, &challenge.GoalPoints, &challenge.StartDate, &challenge.EndDate, &challenge.UserID, &challenge.CollectionID, &challenge.CreatedAt)
+		Scan(&challenge.ID, &challenge.Title, &challenge.Description, &challenge.Unit, &challenge.StartDate, &challenge.EndDate, &challenge.UserID, &challenge.CollectionID, &challenge.CreatedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w; id: %d", ErrChallengeNotFound, id)
@@ -156,11 +156,11 @@ func (s *Store) FindChallengeByID(ctx context.Context, id int) (*Challenge, erro
 
 func (s *Store) AddChallenge(ctx context.Context, challenge *Challenge) error {
 	query := `
-		INSERT INTO challenges(title, description, unit, goal_points, start_date, end_date, user_id, collection_id)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO challenges(title, description, unit, start_date, end_date, user_id, collection_id)
+		VALUES(?, ?, ?, ?, ?, ?, ?)
 	`
 
-	_, err := s.db.ExecContext(ctx, query, challenge.Title, challenge.Description, challenge.Unit, challenge.GoalPoints, challenge.StartDate, challenge.EndDate, challenge.UserID, challenge.CollectionID)
+	_, err := s.db.ExecContext(ctx, query, challenge.Title, challenge.Description, challenge.Unit, challenge.StartDate, challenge.EndDate, challenge.UserID, challenge.CollectionID)
 	if err != nil {
 		return err
 	}
@@ -171,11 +171,11 @@ func (s *Store) AddChallenge(ctx context.Context, challenge *Challenge) error {
 func (s *Store) UpdateChallenge(ctx context.Context, challenge *Challenge) error {
 	query := `
 		UPDATE challenges
-		SET title = ?, description = ?, unit = ?, goal_points = ?, start_date = ?, end_date = ?
+		SET title = ?, description = ?, unit = ?, start_date = ?, end_date = ?
 		WHERE id = ?
 	`
 
-	_, err := s.db.ExecContext(ctx, query, challenge.Title, challenge.Description, challenge.Unit, challenge.GoalPoints, challenge.StartDate, challenge.EndDate, challenge.ID)
+	_, err := s.db.ExecContext(ctx, query, challenge.Title, challenge.Description, challenge.Unit, challenge.StartDate, challenge.EndDate, challenge.ID)
 	if err != nil {
 		return err
 	}

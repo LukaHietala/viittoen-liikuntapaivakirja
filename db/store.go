@@ -10,7 +10,7 @@ var schema = `
 	CREATE TABLE IF NOT EXISTS users (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,
-		email TEXT NOT NULL,
+		email TEXT NOT NULL UNIQUE,
 		password_hash TEXT NOT NULL,
 		is_admin BOOLEAN NOT NULL DEFAULT FALSE,
 		color TEXT NOT NULL
@@ -32,7 +32,6 @@ var schema = `
 		title TEXT NOT NULL,
 		description TEXT NOT NULL,
 		unit TEXT NOT NULL,
-		goal_points INTEGER NOT NULL,
 		start_date TEXT NOT NULL,
 		end_date TEXT NOT NULL,
 		user_id	INTEGER NOT NULL,

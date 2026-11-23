@@ -12,7 +12,7 @@ function PerformanceList(props) {
 												 />
 										 }</For>
 						<Show when={props.performances().length == 0}>
-                <div class="block">
+                <div style="padding: 15px;">
 										Ei suorituksia
                 </div>
 						</Show>

@@ -14,7 +14,7 @@ function PerformanceList(props) {
 												 }</For>
 						</div>
 						<Show when={props.performances().length == 0}>
-								<div class="item-info">
+								<div class="block">
 										Ei suorituksia
 								</div>
 						</Show>

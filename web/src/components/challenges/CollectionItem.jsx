@@ -18,7 +18,7 @@ function CollectionItem(props) {
 				const d = new Date();
 				return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
 		};
-		const isActive = () => now() > collection.startDate && now() < collection.endDate;
+		const isActive = () => now() >= collection.startDate && now() <= collection.endDate;
 
 		const [adding, setAdding] = createSignal(false);
 		const [editing, setEditing] = createSignal(false);

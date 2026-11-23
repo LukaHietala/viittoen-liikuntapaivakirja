@@ -19,7 +19,7 @@ function ChallengeItem(props) {
 				const d = new Date();
 				return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
 		};
-		const isActive = () => now() > challenge.startDate && now() < challenge.endDate;
+		const isActive = () => now() >= challenge.startDate && now() <= challenge.endDate;
 		
 		const [editing, setEditing] = createSignal(false);
 		const [showPerformances, setShowPerformances] = createSignal(false);

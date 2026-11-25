@@ -50,10 +50,12 @@ function ChallengeItem(props) {
 												<button onClick={() => setShowPerformances(!showPerformances())}>
 														Näytä suoritukset
 												</button>
-												<Show when={!editing()}>
-														<button class="btn-icon" onClick={() => setEditing(true)}>
-																<img src={penIcon} alt="Muokkaa" />
-														</button>
+												<Show when={user() && user().isAdmin}>
+														<Show when={!editing()}>
+																<button class="btn-icon" onClick={() => setEditing(true)}>
+																		<img src={penIcon} alt="Muokkaa" />
+																</button>
+														</Show>
 												</Show>
                     </Show>
 										<Show

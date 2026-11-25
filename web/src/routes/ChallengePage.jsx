@@ -125,20 +125,22 @@ function ChallengePage() {
 		return (
 				<>
 						<h2>Haasteet</h2>
-            <Show when={adding()}
-                  fallback={
-                      <div class="block">
-                          <button onClick={() => setAdding(true)}>
-                              Luo päähaaste
-                          </button>
-                      </div>
-                  }>
-                <CollectionForm
-                    onSubmit={addCollection}
-                    collection={null}
-                    cancel={setAdding(false)}
-                />
-            </Show>
+						<Show when={user() && user().isAdmin}>
+								<Show when={adding()}
+											fallback={
+													<div class="block">
+															<button onClick={() => setAdding(true)}>
+																	Luo päähaaste
+															</button>
+													</div>
+											}>
+										<CollectionForm
+												onSubmit={addCollection}
+												collection={null}
+												cancel={setAdding(false)}
+										/>
+								</Show>
+						</Show>
             <h3>Päähaasteet</h3>
 						<Suspense fallback={<p>Ladataan...</p>}>
 								<Show when={collections() && users()}>

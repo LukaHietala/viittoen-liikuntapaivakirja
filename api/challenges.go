@@ -33,13 +33,18 @@ func (rs *challengeResource) Routes() chi.Router {
 
 	r.Get("/", rs.List)
 	r.Get("/active", rs.ListActive)
-	r.Post("/", rs.Create)
+	r.Group(func(r chi.Router) {
+		r.Post("/", rs.Create)
+	})
 
 	r.Route("/{challengeID}", func(r chi.Router) {
 		r.Use(rs.ChallengeCtx)
 		r.Get("/", rs.FindOne)
-		r.Delete("/", rs.Delete)
-		r.Put("/", rs.Update)
+		r.Group(func(r chi.Router) {
+			r.Use(rs.auth.AdminOnly)
+			r.Delete("/", rs.Delete)
+			r.Put("/", rs.Update)
+		})
 	})
 
 	return r
@@ -257,24 +262,6 @@ func (rs *challengeResource) Update(w http.ResponseWriter, r *http.Request) {
 	currentChallenge.StartDate = data.StartDate
 	currentChallenge.EndDate = data.EndDate
 
-	// Only admin or owner can edit the challenge
-	userID, ok := getUserID(r)
-	if !ok {
-		render.Render(w, r, ErrInvalidRequest(errors.New("no valid user id")))
-		return
-	}
-
-	user, err := rs.store.FindUserByID(r.Context(), userID)
-	if err != nil {
-		render.Render(w, r, ErrUnauthorized())
-		return
-	}
-
-	if !user.IsAdmin && currentChallenge.UserID != user.ID {
-		render.Render(w, r, ErrUnauthorized())
-		return
-	}
-
 	if err := rs.store.UpdateChallenge(r.Context(), currentChallenge); err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
@@ -290,25 +277,7 @@ func (rs *challengeResource) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Only admin or owner can delete the challenge
-	userID, ok := getUserID(r)
-	if !ok {
-		render.Render(w, r, ErrInvalidRequest(errors.New("no valid user id")))
-		return
-	}
-
-	user, err := rs.store.FindUserByID(r.Context(), userID)
-	if err != nil {
-		render.Render(w, r, ErrUnauthorized())
-		return
-	}
-
-	if !user.IsAdmin && challenge.UserID != user.ID {
-		render.Render(w, r, ErrUnauthorized())
-		return
-	}
-
-	err = rs.store.DeleteChallengeByID(r.Context(), challenge.ID)
+	err := rs.store.DeleteChallengeByID(r.Context(), challenge.ID)
 	if err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return

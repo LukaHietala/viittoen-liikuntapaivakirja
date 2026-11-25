@@ -47,24 +47,26 @@ function CollectionItem(props) {
 														</span> 
                         </div>
 										</div>
-										<div class="item-actions">
-												<Show when={!isConfirmingDelete()}>
-														<button onClick={() => setShowing(!showing())}>
-																Näytä alihaasteet
-														</button>
-														<Show when={!editing()}>
-																<button class="btn-icon" onClick={() => setEditing(true)}>
-																		<img src={penIcon} alt="Muokkaa" />
-																</button>	
+												<div class="item-actions">
+														<Show when={!isConfirmingDelete()}>
+																<button onClick={() => setShowing(!showing())}>
+																		Näytä alihaasteet
+																</button>
+																<Show when={user() && user().isAdmin}>
+																		<Show when={!editing()}>
+																				<button class="btn-icon" onClick={() => setEditing(true)}>
+																						<img src={penIcon} alt="Muokkaa" />
+																				</button>	
+																		</Show>
+																</Show>
 														</Show>
-												</Show>
-												<Show when={user() && (user().isAdmin || user().id == collection.userId)}>
-														<ConfirmButton
-																onConfirmChange={setIsConfirmingDelete} 
-																onClick={() => props.deleteCollection(collection.id)}
-														/>
-												</Show>
-										</div>
+														<Show when={user() && (user().isAdmin || user().id == collection.userId)}>
+																<ConfirmButton
+																		onConfirmChange={setIsConfirmingDelete} 
+																		onClick={() => props.deleteCollection(collection.id)}
+																/>
+														</Show>
+												</div>
 								</div>
 								<Show when={editing()}>
 										<CollectionForm
@@ -76,14 +78,15 @@ function CollectionItem(props) {
 								</Show>
 								<Show when={showing()}>
 										<Show when={adding()} fallback={
-															<div class="hierarchical-item">
-																	<div></div>
-																	<div class="item-actions">
-																			<button onClick={() => setAdding(!adding())}>
-																					Lisää alihaaste
-																			</button>
+															<Show when={user() && user().isAdmin}>
+																	<div class="hierarchical-item">
+																			<div class="item-actions">
+																					<button onClick={() => setAdding(!adding())}>
+																							Lisää alihaaste
+																					</button>
+																			</div>
 																	</div>
-															</div>
+															</Show>
 													}>
 												<ChallengeForm
 														title="Lisätään alihaaste"

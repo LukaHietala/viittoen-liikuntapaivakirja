@@ -30,13 +30,19 @@ func (rs *collectionResource) Routes() chi.Router {
 
 	r.Get("/", rs.List)
 	r.Get("/active", rs.ListActive)
-	r.Post("/", rs.Create)
+	r.Group(func(r chi.Router) {
+		r.Use(rs.auth.AdminOnly)
+		r.Post("/", rs.Create)
+	})
 
 	r.Route("/{collectionID}", func(r chi.Router) {
 		r.Use(rs.CollectionCtx)
 		r.Get("/", rs.FindOne)
-		r.Delete("/", rs.Delete)
-		r.Put("/", rs.Update)
+		r.Group(func(r chi.Router) {
+			r.Use(rs.auth.AdminOnly)
+			r.Delete("/", rs.Delete)
+			r.Put("/", rs.Update)
+		})
 	})
 
 	return r
@@ -219,23 +225,6 @@ func (rs *collectionResource) Update(w http.ResponseWriter, r *http.Request) {
 	currentCollection.StartDate = data.StartDate
 	currentCollection.EndDate = data.EndDate
 
-	userID, ok := getUserID(r)
-	if !ok {
-		render.Render(w, r, ErrInvalidRequest(errors.New("no valid user id")))
-		return
-	}
-
-	user, err := rs.store.FindUserByID(r.Context(), userID)
-	if err != nil {
-		render.Render(w, r, ErrUnauthorized())
-		return
-	}
-
-	if !user.IsAdmin && currentCollection.UserID != user.ID {
-		render.Render(w, r, ErrUnauthorized())
-		return
-	}
-
 	if err := rs.store.UpdateCollection(r.Context(), currentCollection); err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
@@ -251,24 +240,7 @@ func (rs *collectionResource) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := getUserID(r)
-	if !ok {
-		render.Render(w, r, ErrInvalidRequest(errors.New("no valid user id")))
-		return
-	}
-
-	user, err := rs.store.FindUserByID(r.Context(), userID)
-	if err != nil {
-		render.Render(w, r, ErrUnauthorized())
-		return
-	}
-
-	if !user.IsAdmin && collection.UserID != user.ID {
-		render.Render(w, r, ErrUnauthorized())
-		return
-	}
-
-	err = rs.store.DeleteCollectionByID(r.Context(), collection.ID)
+	err := rs.store.DeleteCollectionByID(r.Context(), collection.ID)
 	if err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
